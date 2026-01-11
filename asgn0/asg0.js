@@ -42,11 +42,23 @@ function drawVector(v, color) {
   // Calculate end point: center + (coordinate * 20)
   // We subtract Y because the canvas Y-axis points down
   ctx.lineTo(cx + v.elements[0] * 20, cy - v.elements[1] * 20);
-  
   ctx.stroke();
 }
 
 function handleDrawEvent() {
-  let v1 = document.getElementById("name").value;
-  console.log(v1)
+    // Get the canvas and context
+    var canvas = document.getElementById('example');
+    var ctx = canvas.getContext('2d');
+
+    // Clear the canvas (fill with black)
+    ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Read the values from the text boxes
+    var v1x = document.getElementById('v1X').value;
+    var v1y = document.getElementById('v1Y').value;
+
+    // Create v1 and draw it
+    var v1 = new Vector3([v1x, v1y, 0]);
+    drawVector(v1, "red");
 }
