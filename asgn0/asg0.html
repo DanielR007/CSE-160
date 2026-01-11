@@ -1,5 +1,3 @@
- <script src="lib/cuon-matrix-cse160.js"></script>
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,6 +9,35 @@
     <canvas id="example" width="400" height="400">
       Please use a browser that supports "canvas"
     </canvas>
+    <script src="lib/cuon-matrix-cse160.js"></script>
     <script src="asg0.js"></script>
+    
+    <br><br>
+    <label for="name">V1</label>
+
+    <input
+      type="text"
+      id="name"
+      name="name"
+      required
+      minlength="4"
+      maxlength="8"
+      size="10" />
+
+    <br><br>
+    <label for="pet-select">Operation:</label>
+
+      <select name="pets" id="pet-select">
+        <option value="">--Please choose an option--</option>
+        <option value="add">Add</option>
+        <option value="sub">Sub</option>
+        <option value="hamster">Hamster</option>
+        <option value="parrot">Parrot</option>
+        <option value="spider">Spider</option>
+        <option value="goldfish">Goldfish</option>
+      </select>
+
+    <input type="button" value = "Click me!" onclick="handleDrawEvent()"></input>  
+
   </body>
 </html>
