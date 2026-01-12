@@ -109,5 +109,14 @@ function handleDrawOperationEvent() {
         v2.div(scalar);
         drawVector(v1, "green");
         drawVector(v2, "green");
-    }
+    } else if (operation === "magnitude") {
+        console.log("Magnitude v1: ", v1.magnitude());
+        console.log("Magnitude v2: ", v2.magnitude());
+    } else if (operation === "normalize") {
+        v1.normalize();
+        v2.normalize();
+        drawVector(v1, "green");
+        drawVector(v2, "green");
+}
+    
 }
