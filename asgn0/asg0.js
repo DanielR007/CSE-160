@@ -125,5 +125,9 @@ function handleDrawOperationEvent() {
         var angleRad = Math.acos(dotProduct / (magV1 * magV2));
         var angleDeg = angleRad * (180 / Math.PI);
         console.log("Angle between v1 and v2 (degrees): ", angleDeg);
-    }
-}
+    } else if (operation === "area") {
+        var crossProduct = Vector3.cross(v1, v2);
+        var area = 0.5 * crossProduct.magnitude();
+        console.log("Area of triangle formed by v1 and v2: ", area);
+    } 
+  }
