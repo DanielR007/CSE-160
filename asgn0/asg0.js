@@ -55,10 +55,16 @@ function handleDrawEvent() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Read the values from the text boxes
-    var v1x = document.getElementById('v1X').value;
-    var v1y = document.getElementById('v1Y').value;
+    var v1x = parseFloat(document.getElementById('v1X').value) || 0;
+    var v1y = parseFloat(document.getElementById('v1Y').value) || 0;
 
     // Create v1 and draw it
     var v1 = new Vector3([v1x, v1y, 0]);
     drawVector(v1, "red");
+
+     //Read and create v2 and draw it
+    var v2x = parseFloat(document.getElementById('v2X').value) || 0;
+    var v2y = parseFloat(document.getElementById('v2Y').value) || 0;
+    var v2 = new Vector3([v2x, v2y, 0]);
+    drawVector(v2, "blue");
 }
