@@ -68,3 +68,46 @@ function handleDrawEvent() {
     var v2 = new Vector3([v2x, v2y, 0]);
     drawVector(v2, "blue");
 }
+
+
+function handleDrawOperationEvent() {
+    // Setup Canvas
+    var canvas = document.getElementById('example');
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Read v1 and v2
+    var v1x = parseFloat(document.getElementById('v1X').value) || 0;
+    var v1y = parseFloat(document.getElementById('v1Y').value) || 0;
+    var v1 = new Vector3([v1x, v1y, 0]);
+    drawVector(v1, "red");
+
+    var v2x = parseFloat(document.getElementById('v2X').value) || 0;
+    var v2y = parseFloat(document.getElementById('v2Y').value) || 0;
+    var v2 = new Vector3([v2x, v2y, 0]);
+    drawVector(v2, "blue");
+
+    // Read Operation and Scalar
+    var operation = document.getElementById('operation-select').value;
+    var scalar = parseFloat(document.getElementById('scalar').value) || 1;
+
+    // Perform math and draw green results
+    if (operation === "add") {
+        v1.add(v2);
+        drawVector(v1, "green");
+    } else if (operation === "sub") {
+        v1.sub(v2);
+        drawVector(v1, "green");
+    } else if (operation === "mul") {
+        v1.mul(scalar);
+        v2.mul(scalar);
+        drawVector(v1, "green");
+        drawVector(v2, "green");
+    } else if (operation === "div") {
+        v1.div(scalar);
+        v2.div(scalar);
+        drawVector(v1, "green");
+        drawVector(v2, "green");
+    }
+}

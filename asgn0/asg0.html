@@ -22,31 +22,20 @@
     <input type="button" id="drawButton" value="Draw" onclick="handleDrawEvent()">
     
     <br><br>
-    <label for="name">V1</label>
+    <label for="operation-select">Operation:</label>
 
-    <input
-      type="text"
-      id="name"
-      name="name"
-      required
-      minlength="4"
-      maxlength="8"
-      size="10" />
-
-    <br><br>
-    <label for="pet-select">Operation:</label>
-
-      <select name="pets" id="pet-select">
-        <option value="">--Please choose an option--</option>
+      <select id="operation-select">
         <option value="add">Add</option>
-        <option value="sub">Sub</option>
-        <option value="hamster">Hamster</option>
-        <option value="parrot">Parrot</option>
-        <option value="spider">Spider</option>
-        <option value="goldfish">Goldfish</option>
+        <option value="sub">Subtract</option>
+        <option value="mul">Multiply</option>
+        <option value="div">Divide</option>
       </select>
-
-    <input type="button" value = "Click me!" onclick="handleDrawEvent()"></input>  
+    <br><br>
+    Scalar: <input type="text" id="scalar" size="5">
+    <br><br>
+    <input type="button" value = "Draw Operation" onclick="handleDrawOperationEvent()">
+    <br><br>
+    
 
   </body>
 </html>
