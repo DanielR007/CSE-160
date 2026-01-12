@@ -117,6 +117,13 @@ function handleDrawOperationEvent() {
         v2.normalize();
         drawVector(v1, "green");
         drawVector(v2, "green");
-}
-    
+    } else if (operation === "angle between") {
+        var dotProduct = Vector3.dot(v1, v2);
+        console.log("Dot Product: ", dotProduct);
+        var magV1 = v1.magnitude();
+        var magV2 = v2.magnitude();
+        var angleRad = Math.acos(dotProduct / (magV1 * magV2));
+        var angleDeg = angleRad * (180 / Math.PI);
+        console.log("Angle between v1 and v2 (degrees): ", angleDeg);
+    }
 }
