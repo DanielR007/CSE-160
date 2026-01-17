@@ -23,10 +23,10 @@ let u_FragColor;
 
 function setupWebGL() {
   // Retrieve <canvas> element
-  var canvas = document.getElementById('webgl');
+  canvas = document.getElementById('webgl');
 
   // Get the rendering context for WebGL
-  var gl = getWebGLContext(canvas);
+  gl = getWebGLContext(canvas);
   if (!gl) {
     console.log('Failed to get the rendering context for WebGL');
     return;
