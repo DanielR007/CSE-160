@@ -17,6 +17,7 @@ var FSHADER_SOURCE = `
     gl_FragColor = u_FragColor;
   }`
 
+
 // Global variables
 let canvas;
 let gl;
@@ -29,7 +30,8 @@ function setupWebGL() {
   canvas = document.getElementById('webgl');
 
   // Get the rendering context for WebGL
-  gl = getWebGLContext(canvas);
+  //gl = getWebGLContext(canvas);
+  gl = canvas.getContext("webgl", {preserveDrawingBuffer: true});
   if (!gl) {
     console.log('Failed to get the rendering context for WebGL');
     return;
@@ -101,6 +103,8 @@ function main() {
 
   // Register function (event handler) to be called on a mouse press
   canvas.onmousedown = click;
+  //canvas.onmousemove = click;
+  canvas.onmousemove = function(ev) { if(ev.buttons == 1) click(ev); };
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -165,16 +169,31 @@ function convertCoordinatesEventToGL(ev) {
 
 //Draw every shape that is supposed to be on the canvas
 function renderAllShapes() {
+
+  // Check the time at the start of this function
+  var startTime = performance.now();
+
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  //var len = g_points.lenth;
+  //Draw each shape in the list
   var len = g_shapesList.length;
-  
   for(var i = 0; i < len; i++) {
-    
     g_shapesList[i].render();
-
   }
 
+  // Check the time at the end of this function, and show on web page
+  var duration = performance.now() - startTime;
+  sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
+
+}
+
+// Set the text of an HTML element
+function sendTextToHTML(text, htmlID) {
+  var htmlElm = document.getElementById(htmlID);
+  if (!htmlElm) {
+    console.log("Failed to get " + htmlID + " from HTML");
+    return;
+  }
+  htmlElm.innerHTML = text;
 }
