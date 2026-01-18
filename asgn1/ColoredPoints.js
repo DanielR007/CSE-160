@@ -74,11 +74,13 @@ function connectVariablesToGLSL() {
 const POINT = 0;
 const TRIANGLE = 1;
 const CIRCLE = 2;
+const KOCO = 3; //My drawing
 
 // Global related UI elements
 let g_selectedColor=[1.0,1.0,1.0,1.0];
 let g_selectedSize=5;
 let g_selectedType=POINT;
+let g_kocoLeafTilt = 0;
 
 // Set up actions for  the HTML UI elements
 function addActionsForHtmlUI() {
@@ -90,20 +92,27 @@ function addActionsForHtmlUI() {
 
   document.getElementById('pointButton').onclick = function() { g_selectedType = POINT};
   document.getElementById('triButton').onclick  = function() { g_selectedType = TRIANGLE};
-  document.getElementById('circleButton').onclick  = function() { g_selectedType = CIRCLE};  
+  document.getElementById('circleButton').onclick = function() { g_selectedType = CIRCLE };
+  document.getElementById('kocoButton').onclick = function() { g_selectedType = KOCO }; 
   
-   // circle segment Slider Events
+  // circle segment Slider Events
   document.getElementById('segmentSlide').addEventListener('mouseup', function() { 
     g_selectedSegments = this.value; 
   });
   // Color Slider Events
-  document.getElementById('redSlide').addEventListener('mouseup',   function() { g_selectedColor[0] = this.value/100; });
+  // Use 'input' instead of 'mouseup' for real-time updates
+  document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
-  document.getElementById('blueSlide').addEventListener('mouseup',  function() { g_selectedColor[2] = this.value/100; });
+  document.getElementById('blueSlide').addEventListener('mouseup', function() { g_selectedColor[2] = this.value/100; });
+  document.getElementById('sizeSlide').addEventListener('mouseup', function() { g_selectedSize = this.value; });
   
   // Size Slider Event  
   document.getElementById('sizeSlide').addEventListener('mouseup', function() { g_selectedSize = this.value; });
 
+  document.getElementById('kocoStemSlide').addEventListener('mouseup', function() { 
+    g_kocoStemHeight = this.value / 100; 
+    renderAllShapes(); 
+  });
 }
 
 function main() {
@@ -138,16 +147,25 @@ function click(ev) {
   
   // Create a store the new point
   let point;
-  if (g_selectedType==POINT){
+  if (g_selectedType == POINT) {
     point = new Point();
-  } else if (g_selectedType==TRIANGLE) {
+  } else if (g_selectedType == TRIANGLE) {
     point = new Triangle();
-  } else {
-    point = new Circle();
+  } else if (g_selectedType == CIRCLE) { // ADD THIS BLOCK
+    point = new Circle(); 
+  } else if (g_selectedType == KOCO) {
+    point = new Koco(); 
   }
+  
   point.position=[x, y];
   point.color=g_selectedColor.slice();
-  point.size=g_selectedSize;
+  
+  // Only use the slider size if it's NOT a Koco (or let the slider control it)
+  if (g_selectedType == KOCO) {
+    point.size = 100.0; // Force the 25% size
+  } else {
+    point.size = g_selectedSize;
+  }
   g_shapesList.push(point);
 
   //Draw every shape that is supposed to be on the canvas
