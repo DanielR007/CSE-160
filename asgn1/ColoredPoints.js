@@ -57,6 +57,17 @@ function connectVariablesToGLSL() {
   
 }
 
+let g_selectColor = [1.0, 1.0, 1.0, 1.0];
+
+// Set up actions for  the HTML UI elements
+function addActionsForHtmlUI() {
+  
+  // Buttons Event (Shape Type)
+  document.getElementById('green').onclick = function() {g_selectColor = [0.0, 1.0, 0.0, 1.0]; };
+  document.getElementById('red').onclick   = function() {g_selectColor = [1.0, 0.0, 0.0, 1.0]; };
+
+}
+
 function main() {
   
   // Set up canvas and gl variables
@@ -64,6 +75,8 @@ function main() {
   // Set up GLSL shader programs and connect GLSL variables
   connectVariablesToGLSL();
   
+  // Set up actions for HTML UI elements
+  addActionsForHtmlUI();
 
   // Register function (event handler) to be called on a mouse press
   canvas.onmousedown = click;
@@ -81,19 +94,21 @@ var g_colors = [];  // The array to store the color of a point
 function click(ev) {
 
   // Extract the x and y coordinates of the mouse click event
-  [x,y] = convertCoordinatesEventToGL(ev);
+  let [x,y] = convertCoordinatesEventToGL(ev);
   
   // Store the coordinates to g_points array
   g_points.push([x, y]);
 
-  // Store the coordinates to g_points array
-  if (x >= 0.0 && y >= 0.0) {      // First quadrant
-    g_colors.push([1.0, 0.0, 0.0, 1.0]);  // Red
-  } else if (x < 0.0 && y < 0.0) { // Third quadrant
-    g_colors.push([0.0, 1.0, 0.0, 1.0]);  // Green
-  } else {                         // Others
-    g_colors.push([1.0, 1.0, 1.0, 1.0]);  // White
-  }
+  // Store the color to g_colors array
+  g_colors.push(g_selectColor);
+  
+//  if (x >= 0.0 && y >= 0.0) {      // First quadrant
+//    g_colors.push([1.0, 0.0, 0.0, 1.0]);  // Red
+//  } else if (x < 0.0 && y < 0.0) { // Third quadrant
+//    g_colors.push([0.0, 1.0, 0.0, 1.0]);  // Green
+//  } else {                         // Others
+//    g_colors.push([1.0, 1.0, 1.0, 1.0]);  // White
+//  }
 
   //Draw every shape that is supposed to be on the canvas
   renderAllShapes();
@@ -109,7 +124,7 @@ function convertCoordinatesEventToGL(ev) {
   x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
   y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
 
-  return [x, y];
+  return ([x, y]);
 }
 
 //Draw every shape that is supposed to be on the canvas
@@ -129,5 +144,5 @@ function renderAllShapes() {
     // Draw
     gl.drawArrays(gl.POINTS, 0, 1);
   }
-  
+
 }
