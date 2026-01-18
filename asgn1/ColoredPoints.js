@@ -25,6 +25,7 @@ let a_Position;
 let u_FragColor;
 let u_Size;
 let g_selectedSegments = 10; // Default value
+let g_kocoStemHeight = 1.1; // Add for my Koco drawing
 
 function setupWebGL() {
   // Retrieve <canvas> element
