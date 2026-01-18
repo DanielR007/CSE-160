@@ -77,6 +77,7 @@ function addActionsForHtmlUI() {
   // Buttons Event (Shape Type)
   document.getElementById('green').onclick = function() { g_selectedColor = [0.0,1.0,0.0,1.0]; };
   document.getElementById('red').onclick   = function() { g_selectedColor = [1.0,0.0,0.0,1.0]; };
+  document.getElementById('clearButton').onclick = function() {g_shapesList=[]; renderAllShapes();};
 
   // Color Slider Events
   document.getElementById('redSlide').addEventListener('mouseup',   function() { g_selectedColor[0] = this.value/100; });
