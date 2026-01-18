@@ -1,133 +1,214 @@
-// DrawTriangle.js (c) 2012 matsuda
-function main() {  
+// ColoredPoint.js (c) 2012 matsuda
+// Vertex shader program
+var VSHADER_SOURCE = `
+  attribute vec4 a_Position;
+  uniform float u_Size;
+  void main() {
+    gl_Position = a_Position;
+    //gl_PointSize = 30.0;
+    gl_PointSize = u_Size;
+  }`
+
+// Fragment shader program
+var FSHADER_SOURCE = `
+  precision mediump float;
+  uniform vec4 u_FragColor; 
+  void main() {
+    gl_FragColor = u_FragColor;
+  }`
+
+
+// Global variables
+let canvas;
+let gl;
+let a_Position;
+let u_FragColor;
+let u_Size;
+let g_selectedSegments = 10; // Default value
+let g_kocoStemHeight = 1.1; // Add for my Koco drawing
+
+function setupWebGL() {
   // Retrieve <canvas> element
-  var canvas = document.getElementById('example');  
-  if (!canvas) { 
-    console.log('Failed to retrieve the <canvas> element');
-    return false; 
-  } 
+  canvas = document.getElementById('webgl');
 
-  // Get the rendering context for 2DCG
-  var ctx = canvas.getContext('2d');
-
-  // Draw a blue rectangle
-  //ctx.fillStyle = 'rgba(0, 0, 255, 1.0)'; // Set color to blue
-  //ctx.fillRect(120, 10, 150, 150);        // Fill a rectangle with the color
-
-    // Draw a black rectangle
-  ctx.fillStyle = 'rgba(0, 0, 0, 1.0)'; // Set color to black
-  ctx.fillRect(0, 0, canvas.width, canvas.height);        // Fill a rectangle with the color
-  
-  // Instantiate v1 as (2.25, 2.25, 0)
-  var v1 = new Vector3([2.25, 2.25, 0]);
-
-  // Call drawVector function to draw v1 in red
-  drawVector(v1, "red");
-}
-
-function drawVector(v, color) {
-  var canvas = document.getElementById('example');
-  var ctx = canvas.getContext('2d');
-
-  ctx.strokeStyle = color;
-
-  // The origin of the vector is he center of the canvas (200, 200)
-  // The coordinates are scaled by 20 for better visualization
-  let cx = canvas.width / 2;
-  let cy = canvas.height / 2;
-
-  ctx.beginPath();
-  ctx.moveTo(cx, cy); // Start at center
-  
-  // Calculate end point: center + (coordinate * 20)
-  // We subtract Y because the canvas Y-axis points down
-  ctx.lineTo(cx + v.elements[0] * 20, cy - v.elements[1] * 20);
-  ctx.stroke();
-}
-
-function handleDrawEvent() {
-    // Get the canvas and context
-    var canvas = document.getElementById('example');
-    var ctx = canvas.getContext('2d');
-
-    // Clear the canvas (fill with black)
-    ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Read the values from the text boxes
-    var v1x = parseFloat(document.getElementById('v1X').value) || 0;
-    var v1y = parseFloat(document.getElementById('v1Y').value) || 0;
-
-    // Create v1 and draw it
-    var v1 = new Vector3([v1x, v1y, 0]);
-    drawVector(v1, "red");
-
-     //Read and create v2 and draw it
-    var v2x = parseFloat(document.getElementById('v2X').value) || 0;
-    var v2y = parseFloat(document.getElementById('v2Y').value) || 0;
-    var v2 = new Vector3([v2x, v2y, 0]);
-    drawVector(v2, "blue");
-}
-
-
-function handleDrawOperationEvent() {
-    // Setup Canvas
-    var canvas = document.getElementById('example');
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Read v1 and v2
-    var v1x = parseFloat(document.getElementById('v1X').value) || 0;
-    var v1y = parseFloat(document.getElementById('v1Y').value) || 0;
-    var v1 = new Vector3([v1x, v1y, 0]);
-    drawVector(v1, "red");
-
-    var v2x = parseFloat(document.getElementById('v2X').value) || 0;
-    var v2y = parseFloat(document.getElementById('v2Y').value) || 0;
-    var v2 = new Vector3([v2x, v2y, 0]);
-    drawVector(v2, "blue");
-
-    // Read Operation and Scalar
-    var operation = document.getElementById('operation-select').value;
-    var scalar = parseFloat(document.getElementById('scalar').value) || 1;
-
-    // Perform math and draw green results
-    if (operation === "add") {
-        v1.add(v2);
-        drawVector(v1, "green");
-    } else if (operation === "sub") {
-        v1.sub(v2);
-        drawVector(v1, "green");
-    } else if (operation === "mul") {
-        v1.mul(scalar);
-        v2.mul(scalar);
-        drawVector(v1, "green");
-        drawVector(v2, "green");
-    } else if (operation === "div") {
-        v1.div(scalar);
-        v2.div(scalar);
-        drawVector(v1, "green");
-        drawVector(v2, "green");
-    } else if (operation === "magnitude") {
-        console.log("Magnitude v1: ", v1.magnitude());
-        console.log("Magnitude v2: ", v2.magnitude());
-    } else if (operation === "normalize") {
-        v1.normalize();
-        v2.normalize();
-        drawVector(v1, "green");
-        drawVector(v2, "green");
-    } else if (operation === "angle between") {
-        var dotProduct = Vector3.dot(v1, v2);
-        console.log("Dot Product: ", dotProduct);
-        var magV1 = v1.magnitude();
-        var magV2 = v2.magnitude();
-        var angleRad = Math.acos(dotProduct / (magV1 * magV2));
-        var angleDeg = angleRad * (180 / Math.PI);
-        console.log("Angle between v1 and v2 (degrees): ", angleDeg);
-    } else if (operation === "area") {
-        var crossProduct = Vector3.cross(v1, v2);
-        var area = 0.5 * crossProduct.magnitude();
-        console.log("Area of triangle formed by v1 and v2: ", area);
-    } 
+  // Get the rendering context for WebGL
+  //gl = getWebGLContext(canvas);
+  gl = canvas.getContext("webgl", {preserveDrawingBuffer: true});
+  if (!gl) {
+    console.log('Failed to get the rendering context for WebGL');
+    return;
   }
+
+}
+
+function connectVariablesToGLSL() {
+// Initialize shaders
+  if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
+    console.log('Failed to intialize shaders.');
+    return;
+  }
+
+  // // Get the storage location of a_Position
+  a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+  if (a_Position < 0) {
+    console.log('Failed to get the storage location of a_Position');
+    return;
+  }
+
+  // Get the storage location of u_FragColor
+  u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
+  if (!u_FragColor) {
+    console.log('Failed to get the storage location of u_FragColor');
+    return;
+  }
+ 
+  // Get the storage location of u_Size
+  u_Size = gl.getUniformLocation(gl.program, 'u_Size');
+  if (!u_Size) {
+    console.log('Failed to get the storage location of u_Size');
+    return;
+  }
+
+}
+
+// Constants
+const POINT = 0;
+const TRIANGLE = 1;
+const CIRCLE = 2;
+const KOCO = 3; //My drawing
+
+// Global related UI elements
+let g_selectedColor=[1.0,1.0,1.0,1.0];
+let g_selectedSize=100;
+let g_selectedType=POINT;
+let g_kocoLeafTilt = 0;
+
+// Set up actions for  the HTML UI elements
+function addActionsForHtmlUI() {
+  
+  // Buttons Event (Shape Type)
+  document.getElementById('green').onclick = function() { g_selectedColor = [0.0,1.0,0.0,1.0]; };
+  document.getElementById('red').onclick   = function() { g_selectedColor = [1.0,0.0,0.0,1.0]; };
+  document.getElementById('clearButton').onclick = function() {g_shapesList=[]; renderAllShapes();};
+
+  document.getElementById('pointButton').onclick = function() { g_selectedType = POINT};
+  document.getElementById('triButton').onclick  = function() { g_selectedType = TRIANGLE};
+  document.getElementById('circleButton').onclick = function() { g_selectedType = CIRCLE };
+  document.getElementById('kocoButton').onclick = function() { g_selectedType = KOCO }; 
+  
+  // circle segment Slider Events
+  document.getElementById('segmentSlide').addEventListener('input', function() { 
+    g_selectedSegments = this.value; 
+  });
+  // Color Slider Events
+  // Use 'input' instead of 'mouseup' for real-time updates
+  document.getElementById('redSlide').addEventListener('input', function() { g_selectedColor[0] = this.value/100; });
+  document.getElementById('greenSlide').addEventListener('input', function() { g_selectedColor[1] = this.value/100; });
+  document.getElementById('blueSlide').addEventListener('input', function() { g_selectedColor[2] = this.value/100; });
+  
+  // Size Slider Event  
+  document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
+
+  document.getElementById('kocoStemSlide').addEventListener('input', function() { 
+    g_kocoStemHeight = this.value / 100; 
+    renderAllShapes(); 
+  });
+}
+
+function main() {
+ 
+  // Set up canvas and gl variables
+  setupWebGL();
+  // Set up GLSL shader programs and connect GLSL variables
+  connectVariablesToGLSL();
+  
+  // Set up actions for HTML UI elements
+  addActionsForHtmlUI();
+
+  // Register function (event handler) to be called on a mouse press
+  canvas.onmousedown = click;
+  //canvas.onmousemove = click;
+  canvas.onmousemove = function(ev) { if(ev.buttons == 1) click(ev); };
+
+  // Specify the color for clearing <canvas>
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+  // Clear <canvas>
+  gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+ 
+var g_shapesList = [];
+
+function click(ev) {
+  // Extract the x and y coordinates of the mouse click event
+  let [x,y] = convertCoordinatesEventToGL(ev);
+  
+  // 1. Create the correct shape object
+  let point;
+  if (g_selectedType == POINT) {
+    point = new Point();
+  } else if (g_selectedType == TRIANGLE) {
+    point = new Triangle();
+  } else if (g_selectedType == CIRCLE) {
+    point = new Circle(); 
+  } else if (g_selectedType == KOCO) {
+    point = new Koco(); 
+  }
+  
+  // 2. Assign shared properties
+  point.position = [x, y];
+  point.color = g_selectedColor.slice();
+  
+  // 3. Assign the size from the slider
+  // This allows the Koco (and everything else) to scale!
+  point.size = g_selectedSize; 
+
+  // 4. Store and Draw
+  g_shapesList.push(point);
+  renderAllShapes();
+}
+
+// Extract the event click and return it in webGL coordinates
+function convertCoordinatesEventToGL(ev) {
+  var x = ev.clientX; // x coordinate of a mouse pointer
+  var y = ev.clientY; // y coordinate of a mouse pointer
+  var rect = ev.target.getBoundingClientRect();
+
+  x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
+  y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
+
+  return ([x, y]);
+}
+
+
+//Draw every shape that is supposed to be on the canvas
+function renderAllShapes() {
+
+  // Check the time at the start of this function
+  var startTime = performance.now();
+
+  // Clear <canvas>
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  //Draw each shape in the list
+  var len = g_shapesList.length;
+  for(var i = 0; i < len; i++) {
+    g_shapesList[i].render();
+  }
+
+  // Check the time at the end of this function, and show on web page
+  var duration = performance.now() - startTime;
+  sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
+
+}
+
+// Set the text of an HTML element
+function sendTextToHTML(text, htmlID) {
+  var htmlElm = document.getElementById(htmlID);
+  if (!htmlElm) {
+    console.log("Failed to get " + htmlID + " from HTML");
+    return;
+  }
+  htmlElm.innerHTML = text;
+}
