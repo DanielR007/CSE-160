@@ -97,20 +97,20 @@ function addActionsForHtmlUI() {
   document.getElementById('kocoButton').onclick = function() { g_selectedType = KOCO }; 
   
   // circle segment Slider Events
-  document.getElementById('segmentSlide').addEventListener('mouseup', function() { 
+  document.getElementById('segmentSlide').addEventListener('input', function() { 
     g_selectedSegments = this.value; 
   });
   // Color Slider Events
   // Use 'input' instead of 'mouseup' for real-time updates
-  document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
-  document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
-  document.getElementById('blueSlide').addEventListener('mouseup', function() { g_selectedColor[2] = this.value/100; });
-  document.getElementById('sizeSlide').addEventListener('mouseup', function() { g_selectedSize = this.value; });
+  document.getElementById('redSlide').addEventListener('input', function() { g_selectedColor[0] = this.value/100; });
+  document.getElementById('greenSlide').addEventListener('input', function() { g_selectedColor[1] = this.value/100; });
+  document.getElementById('blueSlide').addEventListener('input', function() { g_selectedColor[2] = this.value/100; });
+  document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
   
   // Size Slider Event  
-  document.getElementById('sizeSlide').addEventListener('mouseup', function() { g_selectedSize = this.value; });
+  document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
 
-  document.getElementById('kocoStemSlide').addEventListener('mouseup', function() { 
+  document.getElementById('kocoStemSlide').addEventListener('input', function() { 
     g_kocoStemHeight = this.value / 100; 
     renderAllShapes(); 
   });
