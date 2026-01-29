@@ -218,7 +218,7 @@ function renderAllShapes() {
   //  g_shapesList[i].render();
   //}
 
-  drawTriangle3D([-1.0, 0.0, 0.0,   -0.5, -1.0, 0.0,   0.0, 0.0, 0.0]);
+  //drawTriangle3D([-1.0, 0.0, 0.0,   -0.5, -1.0, 0.0,   0.0, 0.0, 0.0]);
 
   //Draw the body cube
   var body = new Cube();
