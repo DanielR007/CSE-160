@@ -2,11 +2,11 @@
 // Vertex shader program
 var VSHADER_SOURCE = `
   attribute vec4 a_Position;
-  uniform float u_Size;
+  uniform mat4 u_ModelMatrix;
   void main() {
-    gl_Position = a_Position;
+    gl_Position = u_ModelMatrix * a_Position;
     //gl_PointSize = 30.0;
-    gl_PointSize = u_Size;
+    //gl_PointSize = u_Size;
   }`
 
 // Fragment shader program
@@ -24,6 +24,7 @@ let gl;
 let a_Position;
 let u_FragColor;
 let u_Size;
+let u_ModelMatrix;
 let g_selectedSegments = 10; // Default value
 let g_kocoStemHeight = 1.1; // Add for my Koco drawing
 
@@ -62,12 +63,15 @@ function connectVariablesToGLSL() {
     return;
   }
  
-  // Get the storage location of u_Size
-  u_Size = gl.getUniformLocation(gl.program, 'u_Size');
-  if (!u_Size) {
-    console.log('Failed to get the storage location of u_Size');
+  // Get the storage location of u_ModelMatrix
+  u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
+  if (!u_ModelMatrix) {
+    console.log('Failed to get the storage location of u_ModelMatrix');
     return;
   }
+
+  var identityM = new Matrix4();
+  gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
 
 }
 
@@ -134,7 +138,9 @@ function main() {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
   // Clear <canvas>
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  //gl.clear(gl.COLOR_BUFFER_BIT);
+  renderAllShapes();
+
 }
 
  
@@ -201,7 +207,16 @@ function renderAllShapes() {
 
   var body = new Cube();
   body.color = [1.0, 0.0, 0.0, 1.0];
+  body.matrix.setTranslate(-.25, -.5, 0.0);
+  body.matrix.scale(0.5, 1, .5);
   body.render();
+
+  var leftArm = new Cube();
+  leftArm.color = [1, 1, 0, 1];
+  leftArm.matrix.setTranslate(.7, 0.0, 0.0);
+  leftArm.matrix.rotate(45, 0, 0,1);
+  leftArm.matrix.scale(0.25, .7, .5);
+  leftArm.render();
   
   // Check the time at the end of this function, and show on web page
   var duration = performance.now() - startTime;
