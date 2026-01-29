@@ -41,7 +41,8 @@ function setupWebGL() {
     console.log('Failed to get the rendering context for WebGL');
     return;
   }
-
+  
+  gl.enable(gl.DEPTH_TEST);
 }
 
 function connectVariablesToGLSL() {
@@ -143,7 +144,7 @@ function main() {
   // Register function (event handler) to be called on a mouse press
   canvas.onmousedown = click;
   //canvas.onmousemove = click;
-  canvas.onmousemove = function(ev) { if(ev.buttons == 1) click(ev); };
+  canvas.onmousemove = function(ev) { if(ev.buttons == 1) {click(ev) }};
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -210,6 +211,7 @@ function renderAllShapes() {
   
   // Clear <canvas>
   
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   //Draw each shape in the list
@@ -223,24 +225,27 @@ function renderAllShapes() {
   //Draw the body cube
   var body = new Cube();
   body.color = [1.0, 0.0, 0.0, 1.0];
-  body.matrix.translate(-.25, -.5, 0.0);
-  body.matrix.scale(0.5, 1, .5);
+  body.matrix.translate(-.25, -.75, 0.0);
+  body.matrix.rotate(-5, 1, 0,0);
+  body.matrix.scale(0.5, .3, .5);
   body.render();
 
   //Draw a left arm
   var leftArm = new Cube();
   leftArm.color = [1, 1, 0, 1];
-  leftArm.matrix.setTranslate(.7, 0.0, 0.0);
-  leftArm.matrix.rotate(45, 0, 0,1);
+  leftArm.matrix.setTranslate(0, -.5, 0.0);
+  leftArm.matrix.rotate(-5, 1, 0,0);
+  leftArm.matrix.rotate(0, 0, 0,1);
   leftArm.matrix.scale(0.25, .7, .5);
+  leftArm.matrix.translate(-.5, 0,0);
   leftArm.render();
   
   //Test box
   var body = new Cube();
   body.color = [1,0,1,1];
-  body.matrix.translate(0,0,-.50,0);
+  body.matrix.translate(-.1,.1,.0,0);
   body.matrix.rotate(-30,1,0,0);
-  body.matrix.scale(.5, .5, .5);
+  body.matrix.scale(.2, .4, .2);
   body.render();
   
   // Check the time at the end of this function, and show on web page
