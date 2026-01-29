@@ -3,8 +3,9 @@
 var VSHADER_SOURCE = `
   attribute vec4 a_Position;
   uniform mat4 u_ModelMatrix;
+  uniform mat4 u_GlobalRotateMatrix;
   void main() {
-    gl_Position = u_ModelMatrix * a_Position;
+    gl_Position = u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     //gl_PointSize = 30.0;
     //gl_PointSize = u_Size;
   }`
@@ -25,6 +26,7 @@ let a_Position;
 let u_FragColor;
 let u_Size;
 let u_ModelMatrix;
+let u_GlobalRotateMatrix;
 let g_selectedSegments = 10; // Default value
 let g_kocoStemHeight = 1.1; // Add for my Koco drawing
 
@@ -70,6 +72,13 @@ function connectVariablesToGLSL() {
     return;
   }
 
+  // Get the storage location of u_GlobalRotateMatrix
+  u_GlobalRotateMatrix = gl.getUniformLocation(gl.program, 'u_GlobalRotateMatrix');
+  if (!u_GlobalRotateMatrix) {
+    console.log('Failed to get the storage location of u_GlobalRotateMatrix');
+    return;
+  }
+  
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
 
@@ -83,8 +92,9 @@ const KOCO = 3; //My drawing
 
 // Global related UI elements
 let g_selectedColor=[1.0,1.0,1.0,1.0];
-let g_selectedSize=100;
+let g_selectedSize=5;
 let g_selectedType=POINT;
+let g_globalAngle=0;
 let g_kocoLeafTilt = 0;
 
 // Set up actions for  the HTML UI elements
@@ -111,7 +121,8 @@ function addActionsForHtmlUI() {
   document.getElementById('blueSlide').addEventListener('input', function() { g_selectedColor[2] = this.value/100; });
   
   // Size Slider Event  
-  document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
+  //document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
+  document.getElementById('angleSlide').addEventListener('input', function() { g_globalAngle = this.value; renderAllShapes();});
 
   document.getElementById('kocoStemSlide').addEventListener('input', function() { 
     g_kocoStemHeight = this.value / 100; 
@@ -193,8 +204,12 @@ function renderAllShapes() {
 
   // Check the time at the start of this function
   var startTime = performance.now();
-
+  // Pass the matrix to u_GlobalRotateMatrix
+  var globalRotMat=new Matrix4().rotate(g_globalAngle,0,1,0);
+  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
+  
   // Clear <canvas>
+  
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   //Draw each shape in the list
@@ -205,18 +220,28 @@ function renderAllShapes() {
 
   drawTriangle3D([-1.0, 0.0, 0.0,   -0.5, -1.0, 0.0,   0.0, 0.0, 0.0]);
 
+  //Draw the body cube
   var body = new Cube();
   body.color = [1.0, 0.0, 0.0, 1.0];
-  body.matrix.setTranslate(-.25, -.5, 0.0);
+  body.matrix.translate(-.25, -.5, 0.0);
   body.matrix.scale(0.5, 1, .5);
   body.render();
 
+  //Draw a left arm
   var leftArm = new Cube();
   leftArm.color = [1, 1, 0, 1];
   leftArm.matrix.setTranslate(.7, 0.0, 0.0);
   leftArm.matrix.rotate(45, 0, 0,1);
   leftArm.matrix.scale(0.25, .7, .5);
   leftArm.render();
+  
+  //Test box
+  var body = new Cube();
+  body.color = [1,0,1,1];
+  body.matrix.translate(0,0,-.50,0);
+  body.matrix.rotate(-30,1,0,0);
+  body.matrix.scale(.5, .5, .5);
+  body.render();
   
   // Check the time at the end of this function, and show on web page
   var duration = performance.now() - startTime;
