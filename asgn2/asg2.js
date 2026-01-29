@@ -235,7 +235,7 @@ function renderAllShapes() {
   leftArm.color = [1, 1, 0, 1];
   leftArm.matrix.setTranslate(0, -.5, 0.0);
   leftArm.matrix.rotate(-5, 1, 0,0);
-  leftArm.matrix.rotate(0, 0, 0,1);
+  leftArm.matrix.rotate(45, 0, 0,1);
   leftArm.matrix.scale(0.25, .7, .5);
   leftArm.matrix.translate(-.5, 0,0);
   leftArm.render();
