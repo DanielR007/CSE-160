@@ -100,7 +100,7 @@ let g_kocoLeafTilt = 0;
 
 // Set up actions for  the HTML UI elements
 function addActionsForHtmlUI() {
-  
+  /*
   // Buttons Event (Shape Type)
   document.getElementById('green').onclick = function() { g_selectedColor = [0.0,1.0,0.0,1.0]; };
   document.getElementById('red').onclick   = function() { g_selectedColor = [1.0,0.0,0.0,1.0]; };
@@ -120,15 +120,18 @@ function addActionsForHtmlUI() {
   document.getElementById('redSlide').addEventListener('input', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('input', function() { g_selectedColor[1] = this.value/100; });
   document.getElementById('blueSlide').addEventListener('input', function() { g_selectedColor[2] = this.value/100; });
-  
+  */
+  document.getElementById('yellowSlide').addEventListener('input', function() { g_yellowAngle = this.value; renderAllShapes();});
+
   // Size Slider Event  
   //document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
   document.getElementById('angleSlide').addEventListener('input', function() { g_globalAngle = this.value; renderAllShapes();});
-
+/*
   document.getElementById('kocoStemSlide').addEventListener('input', function() { 
     g_kocoStemHeight = this.value / 100; 
     renderAllShapes(); 
   });
+  */
 }
 
 function main() {
@@ -235,7 +238,7 @@ function renderAllShapes() {
   leftArm.color = [1, 1, 0, 1];
   leftArm.matrix.setTranslate(0, -.5, 0.0);
   leftArm.matrix.rotate(-5, 1, 0,0);
-  leftArm.matrix.rotate(45, 0, 0,1);
+  leftArm.matrix.rotate(g_yellowAngle, 0, 0,1);
   leftArm.matrix.scale(0.25, .7, .5);
   leftArm.matrix.translate(-.5, 0,0);
   leftArm.render();
