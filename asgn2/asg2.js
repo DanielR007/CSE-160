@@ -308,6 +308,16 @@ function renderAllShapes() {
   //Magenta.matrix.scale(.2, .4, .2);
   Magenta.render();
   
+  // A bunch of rotating cubes
+  var K=10.0;
+  for (var i=0; i<K; i++) {
+    var c = new Cube();
+    c.matrix.translate(-.8,1.9*i/K-1.0,0);
+    c.matrix.rotate(-g_seconds*100,1,1,1);
+    c.matrix.scale(.1, 0.5/K, 1.0/K);
+    c.render();
+  }
+
   // Check the time at the end of this function, and show on web page
   var duration = performance.now() - startTime;
   sendTextToHTML("numdot: " + g_shapesList.length + " ms: " + Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
