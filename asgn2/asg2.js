@@ -159,6 +159,13 @@ function main() {
 
 }
 
+// Animation loop
+function tick() {
+  //print some debug info, so we can see the frame rate
+  console.log(performance.now());
+  renderAllShapes();
+  requestAnimationFrame(tick);
+}
  
 var g_shapesList = [];
 
