@@ -20,7 +20,7 @@ var FSHADER_SOURCE = `
 
 
 // Global variables
-/*
+
 let canvas;
 let gl;
 let a_Position;
@@ -30,7 +30,8 @@ let u_ModelMatrix;
 let u_GlobalRotateMatrix;
 let g_selectedSegments = 10; // Default value
 let g_kocoStemHeight = 1.1; // Add for my Koco drawing
-*/
+
+/*
 //change to true global variables so traingle.js and cube.js can access them
 var canvas;
 var gl;
@@ -41,7 +42,7 @@ var u_ModelMatrix;
 var u_GlobalRotateMatrix;
 var g_selectedSegments = 10; // Default value
 var g_kocoStemHeight = 1.1; // Add for my Koco drawing
-
+*/
 function setupWebGL() {
   // Retrieve <canvas> element
   canvas = document.getElementById('webgl');
@@ -109,6 +110,9 @@ let g_selectedSize=5;
 let g_selectedType=POINT;
 let g_globalAngle=0;
 let g_kocoLeafTilt = 0;
+let g_yellowAngle = 0;
+let g_magentaAngle = 0;
+let g_yellowAnimation=false;
 
 // Set up actions for  the HTML UI elements
 function addActionsForHtmlUI() {
@@ -135,7 +139,10 @@ function addActionsForHtmlUI() {
   */
   document.getElementById('magentaSlide').addEventListener('input', function() { g_magentaAngle = this.value; renderAllShapes();});
   document.getElementById('yellowSlide').addEventListener('input', function() { g_yellowAngle = this.value; renderAllShapes();});
-
+  document.getElementById('magentaAnimOn').onclick  = () => { g_magentaAnimation = true;  };
+  document.getElementById('magentaAnimOff').onclick = () => { g_magentaAnimation = false; };
+  document.getElementById('yellowAnimOn').onclick  = () => { g_yellowAnimation = true;  };
+  document.getElementById('yellowAnimOff').onclick = () => { g_yellowAnimation = false; };
   // Size Slider Event  
   //document.getElementById('sizeSlide').addEventListener('input', function() { g_selectedSize = this.value; });
   document.getElementById('angleSlide').addEventListener('input', function() { g_globalAngle = this.value; renderAllShapes();});
@@ -180,11 +187,22 @@ var g_seconds=performance.now()/1000.0-g_startTime;
 function tick() {
   //print some debug info, so we can see the frame rate
   g_seconds=performance.now()/1000.0-g_startTime;
-  console.log(performance.now());
+  updateAnimationAngles();
+  //console.log(performance.now());
   renderAllShapes();
   requestAnimationFrame(tick);
 }
  
+function updateAnimationAngles() {
+  if (g_yellowAnimation) {
+      g_yellowAngle = (45*Math.sin(g_seconds));
+  }
+  if (g_magentaAnimation) {
+      g_magentaAngle = (45*Math.sin(3*g_seconds));
+  }
+
+}
+
 var g_shapesList = [];
 
 function click(ev) {
@@ -264,24 +282,30 @@ function renderAllShapes() {
   yellow.color = [1, 1, 0, 1];
   yellow.matrix.setTranslate(0, -.5, 0.0);
   yellow.matrix.rotate(-5, 1, 0,0);
-  //yellow.matrix.rotate(g_yellowAngle, 0, 0,1);
-   yellow.matrix.rotate(45*Math.sin(g_seconds), 0, 0,1);
- var yellowCoordinatesMat = new Matrix4(yellow.matrix);
+
+  yellow.matrix.rotate(-g_yellowAngle, 0, 0,1);
+
+  //if (g_yellowAnimation) {
+  //  yellow.matrix.rotate(45*Math.sin(g_seconds), 0, 0,1);
+  //} else {
+  //  yellow.matrix.rotate(-g_yellowAngle, 0, 0,1);
+  //}
+  var yellowCoordinatesMat = new Matrix4(yellow.matrix);
   yellow.matrix.scale(0.25, .7, .5);
   yellow.matrix.translate(-.5, 0,0);
   yellow.render();
   
   //Test box
-  var box = new Cube();
-  box.color = [1,0,1,1];
-  box.matrix = yellowCoordinatesMat;
-  box.matrix.translate(0,0.65,0);
-  box.matrix.rotate(g_magentaAngle,0,0,1);
-  box.matrix.scale(.3, .3, .3);
-  box.matrix.translate(-.5,0,-0.001);
-  //box.matrix.rotate(-30,1,0,0);
-  //box.matrix.scale(.2, .4, .2);
-  box.render();
+  var Magenta = new Cube();
+  Magenta.color = [1,0,1,1];
+  Magenta.matrix = yellowCoordinatesMat;
+  Magenta.matrix.translate(0,0.65,0);
+  Magenta.matrix.rotate(g_magentaAngle,0,0,1);
+  Magenta.matrix.scale(.3, .3, .3);
+  Magenta.matrix.translate(-.5,0,-0.001);
+  //Magenta.matrix.rotate(-30,1,0,0);
+  //Magenta.matrix.scale(.2, .4, .2);
+  Magenta.render();
   
   // Check the time at the end of this function, and show on web page
   var duration = performance.now() - startTime;
