@@ -20,6 +20,7 @@ var FSHADER_SOURCE = `
 
 
 // Global variables
+/*
 let canvas;
 let gl;
 let a_Position;
@@ -29,6 +30,17 @@ let u_ModelMatrix;
 let u_GlobalRotateMatrix;
 let g_selectedSegments = 10; // Default value
 let g_kocoStemHeight = 1.1; // Add for my Koco drawing
+*/
+//change to true global variables so traingle.js and cube.js can access them
+var canvas;
+var gl;
+var a_Position;
+var u_FragColor;
+var u_Size;
+var u_ModelMatrix;
+var u_GlobalRotateMatrix;
+var g_selectedSegments = 10; // Default value
+var g_kocoStemHeight = 1.1; // Add for my Koco drawing
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -155,13 +167,19 @@ function main() {
 
   // Clear <canvas>
   //gl.clear(gl.COLOR_BUFFER_BIT);
-  renderAllShapes();
+  //renderAllShapes();
+  //call for animation loop
+  requestAnimationFrame(tick);
 
 }
+
+var g_startTime=performance.now()/1000.0;
+var g_seconds=performance.now()/1000.0-g_startTime;
 
 // Animation loop
 function tick() {
   //print some debug info, so we can see the frame rate
+  g_seconds=performance.now()/1000.0-g_startTime;
   console.log(performance.now());
   renderAllShapes();
   requestAnimationFrame(tick);
@@ -242,15 +260,16 @@ function renderAllShapes() {
   body.render();
 
   //Draw a left arm
-  var leftArm = new Cube();
-  leftArm.color = [1, 1, 0, 1];
-  leftArm.matrix.setTranslate(0, -.5, 0.0);
-  leftArm.matrix.rotate(-5, 1, 0,0);
-  leftArm.matrix.rotate(g_yellowAngle, 0, 0,1);
-  var yellowCoordinatesMat = new Matrix4(leftArm.matrix);
-  leftArm.matrix.scale(0.25, .7, .5);
-  leftArm.matrix.translate(-.5, 0,0);
-  leftArm.render();
+  var yellow = new Cube();
+  yellow.color = [1, 1, 0, 1];
+  yellow.matrix.setTranslate(0, -.5, 0.0);
+  yellow.matrix.rotate(-5, 1, 0,0);
+  //yellow.matrix.rotate(g_yellowAngle, 0, 0,1);
+   yellow.matrix.rotate(45*Math.sin(g_seconds), 0, 0,1);
+ var yellowCoordinatesMat = new Matrix4(yellow.matrix);
+  yellow.matrix.scale(0.25, .7, .5);
+  yellow.matrix.translate(-.5, 0,0);
+  yellow.render();
   
   //Test box
   var box = new Cube();
@@ -266,7 +285,7 @@ function renderAllShapes() {
   
   // Check the time at the end of this function, and show on web page
   var duration = performance.now() - startTime;
-  sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
+  sendTextToHTML("numdot: " + g_shapesList.length + " ms: " + Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
 
 }
 
