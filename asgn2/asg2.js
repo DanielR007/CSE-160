@@ -112,6 +112,7 @@ let g_globalAngle=0;
 let g_kocoLeafTilt = 0;
 let g_yellowAngle = 0;
 let g_magentaAngle = 0;
+let g_magentaAnimation=false;
 let g_yellowAnimation=false;
 
 // Set up actions for  the HTML UI elements
