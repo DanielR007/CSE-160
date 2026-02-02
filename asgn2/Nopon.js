@@ -247,11 +247,11 @@ class Nopon {
       const m = new Matrix4(baseMat);
       m.translate(xs[i], yBase, z);
 
-      // Fan out
+      // Fan out around z
       m.translate(0.02, 0.0, 0.02);
       m.rotate(angles[i], 0, 0, 1);
       m.translate(-0.02, 0.0, -0.02);
-      this._drawHeadFeathers(baseMat, bob, anim.hatOn);
+    
 
       // Thin feather-like block
       m.scale(0.04, len, 0.04);
@@ -469,6 +469,10 @@ class Nopon {
 
     // Face
     this._drawFace(baseMat, bob, anim);
+
+    
+    // Head feathers
+    this._drawHeadFeathers(baseMat, bob, anim.hatOn)
 
     // Accessories (hat + backpack)
     if (anim.hatOn) this._drawHat(baseMat, bob);
