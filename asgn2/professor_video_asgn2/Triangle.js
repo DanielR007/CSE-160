@@ -34,18 +34,15 @@ class Triangle {
 function drawTriangle(vertices) {
   var n = 3; // The number of vertices
 
-  // Performance optimization (minimum change): reuse ONE global buffer.
-  // g_vertexBuffer is created in asg2.js (global scope).
-  if (!g_vertexBuffer) {
-    g_vertexBuffer = gl.createBuffer();
-    if (!g_vertexBuffer) {
-      console.log('Failed to create the buffer object');
-      return -1;
-    }
+  // Create a buffer object
+  var vertexBuffer = gl.createBuffer();
+  if (!vertexBuffer) {
+    console.log('Failed to create the buffer object');
+    return -1;
   }
 
-  // Bind the reusable buffer
-  gl.bindBuffer(gl.ARRAY_BUFFER, g_vertexBuffer);
+  // Bind the buffer object to target
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   
   // Write date into the buffer object
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
@@ -63,17 +60,15 @@ function drawTriangle(vertices) {
 function drawTriangle3D(vertices) {
   var n = 3; // The number of vertices
 
-  // Performance optimization (minimum change): reuse ONE global buffer.
-  if (!g_vertexBuffer) {
-    g_vertexBuffer = gl.createBuffer();
-    if (!g_vertexBuffer) {
-      console.log('Failed to create the buffer object');
-      return -1;
-    }
+  // Create a buffer object
+  var vertexBuffer = gl.createBuffer();
+  if (!vertexBuffer) {
+    console.log('Failed to create the buffer object');
+    return -1;
   }
 
-  // Bind the reusable buffer
-  gl.bindBuffer(gl.ARRAY_BUFFER, g_vertexBuffer);
+  // Bind the buffer object to target
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   
   // Write date into the buffer object
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);

@@ -1,66 +1,82 @@
-CSE 160 Assignment 2: Blocky 3D Animal
-Student Name: Daniel Rothman Email: dmrothma@ucsc.edu Date: January 2026
+# CSE 160 — Assignment 2: Blocky 3D Animal (Nopon)
 
-Description
-This project is a WebGL-based drawing application that allows users to create points, triangles, circles, and a custom "Koco" character from Sonic Frontiers. The application features interactive sliders for color, size, and segmentation, as well as a fully animated mode.
+Daniel Rothman dmrothma@ucsc.edu
 
-File Directory
-Final Submission
-asg1.html / asg1.js: The core assignment submission. This includes:
+This project implements a blocky 3D Nopon (Xenoblade-inspired) using hierarchical modeling in WebGL.
+The model is built primarily from cubes, with a non-cube cylinder primitive used for the feet (and sword grip).
 
-Canvas drawing logic.
+## Live Demo
+- GitHub Pages URL: <Link>
 
-UI interactions (Points, Triangles, Circles).
+## Controls
+- Mouse drag: rotate the camera (mouse yaw/pitch).
+- Shift + click: “poke” animation (special reaction).
+- Camera Y Rotation slider: global rotation around Y.
 
-The static Koco drawing implementation using Koco.js.
+### Joint Sliders (hierarchy)
+- Ear Wings Base (old Magenta slider): base joint (closest to body)
+- Ear Wings Mid (old Yellow slider): second joint (mid segment)
+- Ear Wings Tip (3rd Joint): third joint (tip segment)
+- Sword Angle (User): optional user swing angle
 
-Koco.js: The custom class that defines the Koco character using coordinate geometry and hierarchical transformations (Body, Arms, Legs, Leaves).
+### Buttons
+- Anim On / Anim Off: toggles the main animation
+- Walk Cycle On / Off: toggles leg stepping/walk cycle
+- Hat On / Hat Off: toggles hat accessory
+- Pack On / Pack Off: toggles backpack accessory
 
-Something Awesome (Animation)
-awesome.html / awesome.js: A modified version of the project that implements a 60 FPS animation loop.
+## Rubric Mapping 
+- Cube drawing isolated in one place:
+  - `Cube.js` renders cubes using a provided model matrix (`u_ModelMatrix`) and color (`u_FragColor`).
+  - `Nopon.js` reuses a single Cube instance via `_drawCube(matrix, color)`.
 
-Feature: The Koco character performs a "Waddle and Jump" animation.
+- Vertex shader uses matrices:
+  - `gl_Position = u_GlobalRotateMatrix * u_ModelMatrix * a_Position`
 
-Implementation: Uses requestAnimationFrame and a global time variable (g_time) to oscillate the coordinates of the arms, legs, body, and leaves using Math.sin() and Math.cos() functions.
+- Global rotation:
+  - Slider-driven camera rotation + mouse drag rotation (yaw/pitch)
 
-Work in Progress / Milestones
-ColoredPoints.html / ColoredPoints.js: The initial development files used to build the foundational point and shape classes (Point.js, Triangle.js, Circle.js).
+- Single render function:
+  - `renderScene()` draws the full Nopon and clears color+depth.
 
-HelloTriangle.html / HelloTriangle.js: Early testing files for WebGL context setup.
+- 8+ parts:
+  - Egg/body slices, belly patch, cheeks, eyes (white/iris/pupil/highlight), nose, mouth, wings (3 segments), feather-fingers, sword, feet cylinders, plus optional hat/backpack.
 
-How to Use
-Open asg1.html in a WebGL-compatible browser.
+- Two joints in a chain (and more):
+  - Wing/Ear base + mid + tip joints are implemented and slider-controlled.
 
-Select a Shape: Click buttons for Point, Triangle, Circle, or Koco.
+- Tick + animation:
+  - `tick()` with `requestAnimationFrame`
+  - `updateAnimationAngles()` drives natural movement
 
-Customize:
+- Animation toggle:
+  - Buttons to enable/disable animation (and walk cycle separately)
 
-Color Sliders: Adjust Red, Green, and Blue values.
+- Color:
+  - Per-part palette set via `u_FragColor` (fur, belly, cheeks, eyes, sword colors)
 
-Size Slider: Change the scale of the shapes.
+- Third-level joint:
+  - “Ear Wings Tip (3rd Joint)” slider
 
-Segments: Adjust the smoothness of the Circles.
+- Non-cube primitive:
+  - Cylinder primitive implemented in `Nopon.js` and used for feet (and sword grip)
 
-Leaf Height: Specifically for the Koco, adjust the height of the top stem/leaves.
+- Poke animation:
+  - Shift + click triggers a different animation sequence
 
-Animation: Open awesome.html to see the Koco come to life with automatic movement.
+- Mouse control:
+  - Drag-to-rotate camera
 
-Snapshots & Milestones
-1. The Concept Art
-Reference image used for the Koco design.
+- Performance + FPS indicator:
+  - `drawTriangle3D()` uses a single reusable global buffer (no createBuffer per triangle)
+  - FPS displayed on the webpage
 
-2. Early Development (ColoredPoints)
-Initial implementation of color sliders and basic shapes.
+## Files
+- `asg2.html` — UI + script includes
+- `asg2.js` — WebGL setup, shaders, UI hooks, animation loop, `renderScene()`
+- `Nopon.js` — Nopon model + hierarchy + cylinder primitive
+- `Cube.js` — cube renderer
+- `Triangle.js` — `drawTriangle3D()` with a reused global buffer
+- `lib/` — cuon utils + matrix library
 
-3. Shape Logic & Bug Fixing
-Refining the Circle and Triangle classes.
-
-4. Final Koco Implementation
-The complete character rendered with triangles, including the 'D R' initial leaves.
-
-Citations & References
-Textbook: WebGL Programming Guide (Matsuda & Lea).
-
-Libraries: cuon-utils.js, webgl-utils.js, webgl-debug.js provided by the course.
-
-Inspiration: Koco character design from Sonic Frontiers.
+run oldasg2.hmtl to see all the prework that created the screen shots - based on professors youtube video.
