@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSE 160 Asgn3 - Nopon Hunter</title>
+    <style>
+      body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #111; color: #eee;}
+      .wrap { display: flex; gap: 20px; padding: 20px; align-items: flex-start; justify-content: center; }
+      #canvas-container { position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+      canvas { border: 2px solid #444; cursor: crosshair; display: block;}
+      
+      #crosshair {
+        position: absolute; top: 50%; left: 50%;
+        width: 20px; height: 20px;
+        margin-left: -10px; margin-top: -10px;
+        pointer-events: none; 
+        font-size: 24px; color: rgba(255, 255, 255, 0.8); 
+        text-align: center; line-height: 20px;
+        text-shadow: 1px 1px 2px black;
+      }
+
+      .panel { width: 320px; padding: 15px; background: #222; border-radius: 8px; border: 1px solid #444;}
+      h2 { margin-top: 0; color: #aaa; text-align: center; font-size: 1.2em;}
+      
+      /* Big Mode Indicator */
+      #modeDisplay {
+        font-size: 1.4em; font-weight: bold; text-align: center;
+        padding: 10px; margin-bottom: 10px; border-radius: 4px;
+        background: #444; color: #fff; border: 2px solid #666;
+      }
+      
+      #scoreBox { 
+        font-size: 1.2em; color: #ffeb3b; font-weight: bold; 
+        border: 2px solid #ffeb3b; padding: 8px; margin: 10px 0; text-align: center;
+        background: rgba(255, 235, 59, 0.1);
+      }
+
+      /* Active Block Box */
+      #blockBox {
+        font-size: 1.1em; color: #fff; font-weight: bold;
+        background: #007acc; padding: 10px; margin: 10px 0;
+        text-align: center; border-radius: 4px; border: 2px solid #0099ff;
+      }
+
+      .controls { font-size: 13px; color: #ccc; line-height: 1.5; background: #1a1a1a; padding: 10px; border-radius: 4px;}
+      
+      button { 
+        width: 100%; cursor: pointer; padding: 10px; 
+        background: #444; color: white; border: 1px solid #666; 
+        font-weight: bold; font-size: 1em; margin-top: 5px;
+        transition: background 0.2s;
+      }
+      button:hover { background: #555; }
+      
+      #numdot { color: #555; font-size: 10px; text-align: right; margin-top: 5px;}
+      #message { color: #4f4; min-height: 20px; text-align: center; font-weight: bold; margin-top: 5px;}
+    </style>
+  </head>
+
+  <body onload="main()">
+    <div class="wrap">
+      <div id="canvas-container">
+        <canvas id="webgl" width="640" height="640">
+          Please use a browser that supports "canvas"
+        </canvas>
+        <div id="crosshair">+</div>
+      </div>
+
+      <div class="panel">
+        <h2>NOPON HUNTER</h2>
+        
+        <div id="modeDisplay">GAME MODE</div>
+        <div id="scoreBox">Caught: 0</div>
+        
+        <div id="blockBox">Active: Stone [1]</div>
+
+        <div class="controls">
+          <b>MOVEMENT:</b><br/>
+          • <b>G:</b> Respawn on Map<br/>
+          • <b>W, A, S, D:</b> Move<br/>
+          • <b>Q, E:</b> Turn<br/>
+          • <b>Mouse:</b> Look (Pan)<br/>
+          <span id="flyInfo" style="color:#666; font-style:italic;">(Fly Mode: R/F to fly, Mouse Pitch)</span>
+          <hr style="border-color:#444">
+          <b>ACTIONS:</b><br/>
+          • <b>ESC:</b> To Access Canvas Modes<br/>
+          • <b>Click:</b> Break Block<br/>
+          • <b>R-Click:</b> Build Block<br/>
+          • <b>1-4:</b> Change Block
+        </div>
+        
+        <button id="modeBtn" onclick="toggleMode()">SWITCH TO FLY MODE</button>
+        <button id="collisionBtn" onclick="toggleCollision()">Collision: ON</button>
+
+        <div id="message"></div>
+        <p id="numdot">FPS: 60</p>
+      </div>
+    </div>
+
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix.js"></script>
+
+    <script src="Triangle.js"></script>
+    <script src="Cube.js"></script>
+    <script src="Nopon.js"></script>
+    <script src="Camera.js"></script>
+    <script src="World.js"></script>
+  </body>
+</html>
