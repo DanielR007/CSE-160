@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Assignment 2 - Blocky Nopon</title>
+    <style>
+      body { font-family: Arial, sans-serif; }
+      .row { margin: 6px 0; }
+      .label { display: inline-block; width: 180px; }
+      .slider { width: 220px; }
+      #hud { margin-top: 6px; }
+      #help { font-size: 12px; opacity: 0.9; margin-top: 8px; }
+    </style>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="400" height="400">
+      Please use a browser that supports "canvas"
+    </canvas>
+
+    <div id="hud">
+      <div id="numdot">Loading...</div>
+      <div id="help">
+        Drag mouse to rotate. Shift+Click to poke.
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="label">Camera Y Rotation</span>
+      <input type="range" min="-180" max="180" value="0" class="slider" id="angleSlide">
+    </div>
+
+    <div class="row">
+      <span class="label">Ear Wings Base (1st Joint)</span>
+      <input type="range" min="-60" max="60" value="0" class="slider" id="magentaSlide">
+      <button type="button" id="magentaAnimOn">Anim On</button>
+      <button type="button" id="magentaAnimOff">Anim Off</button>
+    </div>
+
+    <div class="row">
+      <span class="label">Ear Wings Mid (2nd Joint)</span>
+      <input type="range" min="-60" max="60" value="0" class="slider" id="yellowSlide">
+      <button type="button" id="yellowAnimOn">Anim On</button>
+      <button type="button" id="yellowAnimOff">Anim Off</button>
+    </div>
+
+    <div class="row">
+      <span class="label">Ear Wings Tip (3rd Joint)</span>
+      <input type="range" min="-60" max="60" value="0" class="slider" id="earTipSlide">
+    </div>
+
+    <div class="row">
+      <span class="label">Sword Angle (User)</span>
+      <input type="range" min="-45" max="180" value="10" class="slider" id="swordSlide">
+    </div>
+
+    <div class="row">
+      <span class="label">Accessories</span>
+      <button type="button" id="hatOn">Hat On</button>
+      <button type="button" id="hatOff">Hat Off</button>
+      <button type="button" id="packOn">Pack On</button>
+      <button type="button" id="packOff">Pack Off</button>
+    </div>
+
+    <div class="row">
+      <span class="label">Animation Master</span>
+      <button type="button" id="animOn">On</button>
+      <button type="button" id="animOff">Off</button>
+      <span class="label" style="width: 110px;">Walk Cycle</span>
+      <button type="button" id="walkOn">On</button>
+      <button type="button" id="walkOff">Off</button>
+    </div>
+
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix.js"></script>
+
+    <script src="Triangle.js"></script>
+    <script src="Cube.js"></script>
+    <script src="Nopon.js"></script>
+    <script src="asg2.js"></script>
+  </body>
+</html>
