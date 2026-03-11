@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Shadows Enabled</title>
+    <style>
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // 1. ENABLE RENDERER SHADOWS
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Makes the shadow edges softer
+
+    const fov = 45;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 200; 
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 6, 14);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 0, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#333333'); 
+
+    // --- ADD A FLOOR TO RECEIVE SHADOWS ---
+    const planeGeo = new THREE.PlaneGeometry(40, 40);
+    const planeMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = Math.PI * -0.5; // Rotate 90 degrees to lay flat
+    plane.position.y = -0.5; // Place it just underneath the tires
+    plane.receiveShadow = true; // 2. FLOOR RECEIVES SHADOWS
+    scene.add(plane);
+
+    // --- LIGHTS ---
+    const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.5); // Lowered intensity so shadows pop
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
+    dirLight.position.set(5, 10, 5);
+    
+    // 3. ENABLE LIGHT SHADOWS
+    dirLight.castShadow = true; 
+    
+    // We have to tell the light's internal shadow camera how big of an area to calculate shadows for.
+    // If we don't do this, the models outside the default small box won't cast shadows!
+    dirLight.shadow.camera.left = -10;
+    dirLight.shadow.camera.right = 10;
+    dirLight.shadow.camera.top = 10;
+    dirLight.shadow.camera.bottom = -10;
+    
+    // Increase shadow resolution so they don't look blocky/pixelated
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // --- LOAD MODELS ---
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    // 4. FUNCTION TO MAKE ALL PARTS OF A MODEL CAST/RECEIVE SHADOWS
+    function enableShadows(model) {
+        model.traverse((node) => {
+            if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
+            }
+        });
+    }
+
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => {
+        const duck = gltf.scene;
+        duck.position.set(0, 0, 3);
+        enableShadows(duck);
+        scene.add(duck);
+    });
+
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => {
+        const mazda = gltf.scene;
+        mazda.position.set(-4, 0, 0); 
+        enableShadows(mazda);
+        scene.add(mazda);
+    });
+
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => {
+        const mclaren = gltf.scene;
+        mclaren.position.set(4, 0, 0); 
+        enableShadows(mclaren);
+        scene.add(mclaren);
+    });
+
+    objLoader.load('./base_tri.obj', (obj) => {
+        obj.position.set(0, 0, -3); 
+        enableShadows(obj);
+        scene.add(obj);
+    });
+
+    // --- GUI ---
+    const gui = new GUI();
+    class ColorGUIHelper {
+      constructor(object, prop) { this.object = object; this.prop = prop; }
+      get value() { return `#${this.object[this.prop].getHexString()}`; }
+      set value(hexString) { this.object[this.prop].set(hexString); }
+    }
+
+    const dirFolder = gui.addFolder('Directional Light (Sun)');
+    dirFolder.addColor(new ColorGUIHelper(dirLight, 'color'), 'value').name('Color');
+    dirFolder.add(dirLight, 'intensity', 0, 5, 0.01);
+    // Moving the sun updates the shadow angle in real-time!
+    dirFolder.add(dirLight.position, 'x', -20, 20).name('Sun X');
+    dirFolder.add(dirLight.position, 'y', 1, 20).name('Sun Y (Height)');
+    dirFolder.add(dirLight.position, 'z', -20, 20).name('Sun Z');
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    function animate() {
+      controls.update(); 
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

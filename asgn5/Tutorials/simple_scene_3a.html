@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Load Custom GLTF/GLB Model</title>
+    <style>
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const fov = 45;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 100;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 2, 5);
+
+    // --- ORBIT CONTROLS ---
+    // Added these so you can use your mouse to click, drag, and zoom around the model!
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 1, 0); // Focus the camera slightly above the origin
+    controls.update();
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#333333'); // Dark gray background to make the model pop
+
+    // --- LIGHTING (Crucial for 3D Models!) ---
+    // Without lights, most loaded models will just look like pitch black silhouettes
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Soft global light
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5); // Strong directional light
+    directionalLight.position.set(5, 10, 5);
+    scene.add(directionalLight);
+
+    // --- LOAD THE CUSTOM MODEL ---
+    const loader = new GLTFLoader();
+    
+    // Using a sample GLB duck model. 
+    // To use your own, replace this URL with the path to your downloaded file (e.g., './models/my_model.glb')
+    const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+
+    loader.load(
+      modelUrl, 
+      function (gltf) {
+        // This function runs when the model is successfully loaded
+        const model = gltf.scene;
+        scene.add(model);
+        
+        console.log("Model loaded successfully!");
+      }, 
+      function (xhr) {
+        // This function runs while the model is downloading
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+      }, 
+      function (error) {
+        // This function runs if something goes wrong
+        console.error('An error happened while loading the model:', error);
+      }
+    );
+
+    // Handle Window Resizing
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    // Animation Loop
+    function animate() {
+      // Required if controls.enableDamping or controls.autoRotate are set
+      controls.update(); 
+      
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

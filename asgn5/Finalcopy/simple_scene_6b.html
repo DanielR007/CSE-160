@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Working Skybox and Reflections</title>
+    <style>
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const fov = 45;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 200; 
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 6, 14);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 0, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+
+    // ==========================================
+    // CUBEMAP: THE FIX
+    // ==========================================
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    
+    // 1. Crucial for loading textures from external websites!
+    cubeTextureLoader.setCrossOrigin('anonymous');
+    
+    // 2. Bulletproof URLs hosted by the Three.js developers
+    const environmentMap = cubeTextureLoader.load([
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/px.png',
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/nx.png',
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/py.png',
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/ny.png',
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/pz.png',
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/pisa/nz.png',
+    ]);
+    
+    environmentMap.colorSpace = THREE.SRGBColorSpace;
+    
+    scene.background = environmentMap;
+    scene.environment = environmentMap;
+
+
+    // --- Ground Plane ---
+    const planeGeo = new THREE.PlaneGeometry(60, 60);
+    const planeMat = new THREE.MeshStandardMaterial({ 
+        color: 0x555555,
+        transparent: true,
+        opacity: 0.8,
+        roughness: 0.1, 
+        metalness: 0.5
+    });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = Math.PI * -0.5;
+    plane.position.y = -0.5;
+    plane.receiveShadow = true; 
+    scene.add(plane);
+
+
+    // --- LIGHTS ---
+    const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.4); 
+    scene.add(hemiLight);
+
+    const pointLight = new THREE.PointLight(0xFFFFFF, 3, 20); 
+    pointLight.position.set(0, 4, 0); 
+    scene.add(pointLight);
+    const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
+    scene.add(pointLightHelper);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+    dirLight.position.set(5, 10, 5);
+    dirLight.castShadow = true; 
+    dirLight.shadow.bias = 0.0005;
+    dirLight.shadow.camera.left = -10;
+    dirLight.shadow.camera.right = 10;
+    dirLight.shadow.camera.top = 10;
+    dirLight.shadow.camera.bottom = -10;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.visible = false; 
+    scene.add(dirLight);
+
+    const dirLightHelper = new THREE.DirectionalLightHelper(dirLight);
+    dirLightHelper.visible = false; 
+    scene.add(dirLightHelper);
+
+
+    // --- LOAD MODELS ---
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    function enableShadows(model) {
+        model.traverse((node) => {
+            if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
+            }
+        });
+    }
+
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => {
+        const duck = gltf.scene;
+        duck.position.set(0, 0, 3);
+        enableShadows(duck);
+        scene.add(duck);
+    });
+
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => {
+        const mazda = gltf.scene;
+        mazda.position.set(-4, 0, 0); 
+        enableShadows(mazda);
+        scene.add(mazda);
+    });
+
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => {
+        const mclaren = gltf.scene;
+        mclaren.position.set(4, 0, 0); 
+        enableShadows(mclaren);
+        scene.add(mclaren);
+    });
+
+    objLoader.load('./base_tri.obj', (obj) => {
+        obj.position.set(0, 0, -3); 
+        enableShadows(obj);
+        scene.add(obj);
+    });
+
+
+    // --- GUI CONTROLS ---
+    const gui = new GUI();
+
+    class ColorGUIHelper {
+      constructor(object, prop) { this.object = object; this.prop = prop; }
+      get value() { return `#${this.object[this.prop].getHexString()}`; }
+      set value(hexString) { this.object[this.prop].set(hexString); }
+    }
+
+    function updateHelpers() {
+      pointLightHelper.update();
+      dirLightHelper.update();
+    }
+
+    const helpersParam = { visible: true };
+    gui.add(helpersParam, 'visible').name('Show Light Helpers').onChange(value => {
+        pointLightHelper.visible = value && pointLight.visible;
+        dirLightHelper.visible = value && dirLight.visible; 
+    });
+
+    const hemiFolder = gui.addFolder('Hemisphere (Sky)');
+    hemiFolder.add(hemiLight, 'visible').name('🌤️ Enabled');
+    hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'color'), 'value').name('Sky Color');
+    hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'groundColor'), 'value').name('Ground Color');
+    hemiFolder.add(hemiLight, 'intensity', 0, 2, 0.01);
+
+    const pointFolder = gui.addFolder('Point Light (Bulb)');
+    pointFolder.add(pointLight, 'visible').name('💡 Enabled').onChange(value => {
+        if (helpersParam.visible) pointLightHelper.visible = value;
+    });
+    pointFolder.addColor(new ColorGUIHelper(pointLight, 'color'), 'value');
+    pointFolder.add(pointLight, 'intensity', 0, 50, 0.1);
+    pointFolder.add(pointLight.position, 'x', -10, 10).onChange(updateHelpers);
+    pointFolder.add(pointLight.position, 'y', 1, 10).onChange(updateHelpers);
+    pointFolder.add(pointLight.position, 'z', -10, 10).onChange(updateHelpers);
+
+    const dirFolder = gui.addFolder('Directional (Sun/Shadows)');
+    dirFolder.add(dirLight, 'visible').name('☀️ Enabled').onChange(value => {
+        if (helpersParam.visible) dirLightHelper.visible = value;
+    });
+    dirFolder.addColor(new ColorGUIHelper(dirLight, 'color'), 'value').name('Color');
+    dirFolder.add(dirLight, 'intensity', 0, 5, 0.01);
+    dirFolder.add(dirLight.position, 'x', -20, 20).name('Sun X').onChange(updateHelpers);
+    dirFolder.add(dirLight.position, 'y', 1, 20).name('Sun Y').onChange(updateHelpers);
+    dirFolder.add(dirLight.position, 'z', -20, 20).name('Sun Z').onChange(updateHelpers);
+    dirFolder.add(dirLight.shadow, 'bias', -0.01, 0.01, 0.0001).name('Shadow Bias');
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    function animate() {
+      controls.update(); 
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

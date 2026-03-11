@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assignment 5 - Nopon Hunter Fog Run</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+    }
+
+    #hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 10px 12px;
+      border-radius: 8px;
+      z-index: 10;
+      line-height: 1.5;
+    }
+
+    #hud strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <strong>Nopon Hunter: Fog Run</strong>
+    WASD / Arrow Keys to drive<br>
+    R to reset car
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

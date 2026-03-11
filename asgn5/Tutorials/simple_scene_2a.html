@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js Textures</title>
+    <style>
+      /* Ensure the canvas fills the whole screen without scrollbars */
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const fov = 75;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 5;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 2.5; // Pulled camera back slightly to fit both cubes
+
+    const scene = new THREE.Scene();
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const cubes = []; // We will store our cubes here to animate them
+
+    // Initialize the TextureLoader
+    const loader = new THREE.TextureLoader();
+
+    // --- CUBE 1: A single texture on all 6 sides ---
+    const wallTexture = loader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+    wallTexture.colorSpace = THREE.SRGBColorSpace; // Critical for accurate colors
+    
+    // Using MeshBasicMaterial so it doesn't require lighting to be visible
+    const material1 = new THREE.MeshBasicMaterial({ map: wallTexture });
+    const cube1 = new THREE.Mesh(geometry, material1);
+    cube1.position.x = -1;
+    scene.add(cube1);
+    cubes.push(cube1);
+
+    // --- CUBE 2: 6 different textures, one for each face ---
+    // Helper function to load textures and set color space easily
+    function loadColorTexture(url) {
+      const texture = loader.load(url);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    // Pass an Array of 6 materials to the Mesh
+    const materials = [
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-1.jpg')}),
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-2.jpg')}),
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-3.jpg')}),
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-4.jpg')}),
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-5.jpg')}),
+      new THREE.MeshBasicMaterial({map: loadColorTexture('https://threejs.org/manual/examples/resources/images/flower-6.jpg')}),
+    ];
+
+    const cube2 = new THREE.Mesh(geometry, materials);
+    cube2.position.x = 1;
+    scene.add(cube2);
+    cubes.push(cube2);
+
+    // Handle Window Resizing
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    // Animation Loop
+    function animate(time) {
+      time *= 0.001; // convert time to seconds
+      cubes.forEach((cube, ndx) => {
+        const speed = 1 + ndx * 0.1;
+        const rot = time * speed;
+        cube.rotation.x = rot;
+        cube.rotation.y = rot;
+      });
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

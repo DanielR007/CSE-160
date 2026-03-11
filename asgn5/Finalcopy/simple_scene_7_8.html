@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Surreal Interactive Exhibition</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #c { width: 100vw; height: 100vh; display: block; }
+      /* Added a small UI instruction overlay */
+      #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 1px 1px 2px black; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 8, 20);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 2, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+
+    // ==========================================
+    // LOCAL SKYBOX & ENVIRONMENT
+    // ==========================================
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const environmentMap = cubeTextureLoader.load([
+      './pos-x.jpg', './neg-x.jpg', './pos-y.jpg', 
+      './neg-y.jpg', './pos-z.jpg', './neg-z.jpg'  
+    ]);
+    environmentMap.colorSpace = THREE.SRGBColorSpace;
+    scene.background = environmentMap;
+    scene.environment = environmentMap;
+
+    // --- Showroom Floor ---
+    const planeGeo = new THREE.PlaneGeometry(100, 100);
+    const planeMat = new THREE.MeshStandardMaterial({ 
+        color: 0x222222, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.8
+    });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = Math.PI * -0.5;
+    plane.position.y = -0.5;
+    plane.receiveShadow = true; 
+    scene.add(plane);
+
+    // ==========================================
+    // LIGHTING
+    // ==========================================
+    scene.add(new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.4));
+    
+    const pointLight = new THREE.PointLight(0xFFFFFF, 3, 30); 
+    pointLight.position.set(0, 6, 0); 
+    scene.add(pointLight);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+    dirLight.position.set(5, 15, 5);
+    dirLight.castShadow = true; 
+    dirLight.shadow.bias = 0.0005;
+    dirLight.shadow.mapSize.width = 2048; // High res shadows for exhibition
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    // ==========================================
+    // 20+ PRIMARY SHAPES & ART INSTALLATION
+    // ==========================================
+    const floatingObjects = []; // We will store them here to animate and click them
+    
+    // 1. Pedestals for the models (4 Cylinders)
+    const pedGeo = new THREE.CylinderGeometry(2, 2, 0.5, 32);
+    const pedMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 });
+    const positions = [[0, 3], [-6, 0], [6, 0], [0, -5]]; // Duck, Mazda, McLaren, Base_tri
+    positions.forEach(pos => {
+        const pedestal = new THREE.Mesh(pedGeo, pedMat);
+        pedestal.position.set(pos[0], -0.25, pos[1]);
+        pedestal.receiveShadow = true;
+        pedestal.castShadow = true;
+        scene.add(pedestal);
+    });
+
+    // 2. The Original Textured Cubes (3 Cubes)
+    const texLoader = new THREE.TextureLoader();
+    const brickTex = texLoader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+    brickTex.colorSpace = THREE.SRGBColorSpace;
+    const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const boxMat = new THREE.MeshStandardMaterial({ map: brickTex });
+    
+    for(let i=0; i<3; i++) {
+        const cube = new THREE.Mesh(boxGeo, boxMat);
+        cube.position.set((i - 1) * 4, 6, -4);
+        cube.castShadow = true;
+        scene.add(cube);
+        floatingObjects.push(cube);
+    }
+
+    // 3. Floating Abstract Geometry (15+ Random Shapes)
+    const geometries = [
+        new THREE.TorusGeometry(0.8, 0.3, 16, 100),
+        new THREE.SphereGeometry(1, 32, 16),
+        new THREE.IcosahedronGeometry(1, 0)
+    ];
+    const artMat = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff, roughness: 0.1, metalness: 1.0, envMap: environmentMap 
+    });
+
+    for(let i=0; i < 18; i++) {
+        const randomGeo = geometries[Math.floor(Math.random() * geometries.length)];
+        const mesh = new THREE.Mesh(randomGeo, artMat.clone()); // Clone material so they can glow independently
+        
+        // Randomly scatter them high up in the air
+        mesh.position.x = (Math.random() - 0.5) * 20;
+        mesh.position.y = Math.random() * 8 + 4; 
+        mesh.position.z = (Math.random() - 0.5) * 15;
+        
+        mesh.rotation.x = Math.random() * Math.PI;
+        mesh.rotation.y = Math.random() * Math.PI;
+        
+        mesh.castShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+    }
+
+    // ==========================================
+    // LOAD CUSTOM MODELS
+    // ==========================================
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    function setupModel(model, x, z, scale = 1) {
+        model.position.set(x, 0, z);
+        model.scale.set(scale, scale, scale);
+        model.traverse((node) => {
+            if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; }
+        });
+        scene.add(model);
+    }
+
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => setupModel(gltf.scene, 0, 3, 1));
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => setupModel(gltf.scene, -6, 0, 1));
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => setupModel(gltf.scene, 6, 0, 1));
+    objLoader.load('./base_tri.obj', (obj) => setupModel(obj, 0, -5, 1));
+
+    // ==========================================
+    // WOW FACTOR: INTERACTIVE RAYCASTER
+    // ==========================================
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    window.addEventListener('click', (event) => {
+        // Calculate mouse position in normalized device coordinates (-1 to +1)
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Shoot the ray from the camera through the mouse position
+        raycaster.setFromCamera(pointer, camera);
+
+        // Check if the ray hits any of our floating objects
+        const intersects = raycaster.intersectObjects(floatingObjects);
+
+        if (intersects.length > 0) {
+            const hitObject = intersects[0].object;
+            // Make the clicked object glow a random neon color!
+            hitObject.material.emissive.setHex(Math.random() * 0xffffff);
+            hitObject.material.emissiveIntensity = 2; // Make it bright
+        }
+    });
+
+    // --- GUI Controls ---
+    const gui = new GUI();
+    const guiParams = { autoRotate: true };
+    gui.add(guiParams, 'autoRotate').name('Animate Art');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==========================================
+    // ANIMATION LOOP
+    // ==========================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const time = clock.getElapsedTime();
+
+      // Rotate the floating art pieces
+      if (guiParams.autoRotate) {
+          floatingObjects.forEach((obj, ndx) => {
+              const speed = 0.2 + ndx * 0.05;
+              obj.rotation.x = time * speed;
+              obj.rotation.y = time * speed;
+              // Add a gentle floating bob up and down
+              obj.position.y += Math.sin(time * 2 + ndx) * 0.005; 
+          });
+      }
+
+      controls.update(); 
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <div id="ui">
+        <h2>Surreal Car Exhibition</h2>
+        <p>Left Click + Drag: Orbit Camera</p>
+        <p>Scroll: Zoom</p>
+        <p><b>WOW FEATURE:</b> Click on any floating shape to make it glow!</p>
+    </div>
+    <canvas id="c"></canvas>
+  </body>
+</html>

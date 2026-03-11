@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Exhibition & Complete Lighting Controls</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #c { width: 100vw; height: 100vh; display: block; }
+      #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-family: sans-serif;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+      }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+  </head>
+
+  <body>
+    <div id="ui">
+      <h2>Surreal Car Exhibition</h2>
+      <p>Left Click + Drag: Orbit Camera</p>
+      <p>Scroll: Zoom</p>
+      <p><b>WOW FEATURE:</b> Click on any floating shape to make it glow!</p>
+      <p><b>Extra feature note:</b> Interactive glowing sculptures + cinematic tour mode + BMW displayed inside the white bowl sculpture.</p>
+    </div>
+    <canvas id="c"></canvas>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+      const canvas = document.querySelector('#c');
+      const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 10, 25);
+
+      const controls = new OrbitControls(camera, canvas);
+      controls.target.set(0, 2, 0);
+      controls.update();
+
+      // ==========================================
+      // SKYBOX / ENVIRONMENT
+      // ==========================================
+      const cubeTextureLoader = new THREE.CubeTextureLoader();
+      const environmentMap = cubeTextureLoader.load([
+        './pos-x.jpg',
+        './neg-x.jpg',
+        './pos-y.jpg',
+        './neg-y.jpg',
+        './pos-z.jpg',
+        './neg-z.jpg'
+      ]);
+      environmentMap.colorSpace = THREE.SRGBColorSpace;
+      scene.background = environmentMap;
+      scene.environment = environmentMap;
+
+      // ==========================================
+      // LIGHTS
+      // ==========================================
+      const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.4);
+      scene.add(hemiLight);
+
+      const pointLight = new THREE.PointLight(0xFFFFFF, 3, 40);
+      pointLight.position.set(0, 8, 0);
+      pointLight.castShadow = true;
+      scene.add(pointLight);
+
+      const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
+      scene.add(pointLightHelper);
+
+      const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+      dirLight.position.set(10, 15, 10);
+      dirLight.castShadow = true;
+      dirLight.shadow.bias = 0.0005;
+      dirLight.shadow.camera.left = -25;
+      dirLight.shadow.camera.right = 25;
+      dirLight.shadow.camera.top = 25;
+      dirLight.shadow.camera.bottom = -25;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.visible = false;
+      scene.add(dirLight);
+
+      const dirLightHelper = new THREE.DirectionalLightHelper(dirLight);
+      dirLightHelper.visible = false;
+      scene.add(dirLightHelper);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+      scene.add(ambientLight);
+
+      // ==========================================
+      // LOADERS
+      // ==========================================
+      const gltfLoader = new GLTFLoader();
+      const objLoader = new OBJLoader();
+      const texLoader = new THREE.TextureLoader();
+
+      function enableShadows(model) {
+        model.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+          }
+        });
+      }
+
+      // ==========================================
+      // FLOOR
+      // ==========================================
+      const floorGeo = new THREE.PlaneGeometry(80, 80);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        roughness: 0.95,
+        metalness: 0.05
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -2.05;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // ==========================================
+      // MODELS
+      // ==========================================
+
+      // Duck model
+      gltfLoader.load(
+        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
+        (gltf) => {
+          const duck = gltf.scene;
+          duck.position.set(0, 0, 5);
+          duck.scale.set(0.02, 0.02, 0.02);
+          enableShadows(duck);
+          scene.add(duck);
+        },
+        undefined,
+        (error) => {
+          console.error('Duck load failed:', error);
+        }
+      );
+
+      // Mazda
+      gltfLoader.load(
+        './Mazda RX-7.glb',
+        (gltf) => {
+          const mazda = gltf.scene;
+          mazda.position.set(-8, -2, 0);
+          mazda.scale.set(0.01, 0.01, 0.01);
+          mazda.rotation.y = Math.PI / 5;
+          enableShadows(mazda);
+          scene.add(mazda);
+        },
+        undefined,
+        (error) => {
+          console.error('Mazda load failed:', error);
+        }
+      );
+
+      // McLaren
+      gltfLoader.load(
+        './uploads_files_2815692_Mclaren+Senna.glb',
+        (gltf) => {
+          const mclaren = gltf.scene;
+          mclaren.position.set(8, -2, 0);
+          mclaren.scale.set(1.2, 1.2, 1.2);
+          mclaren.rotation.y = -Math.PI / 6;
+          enableShadows(mclaren);
+          scene.add(mclaren);
+        },
+        undefined,
+        (error) => {
+          console.error('McLaren load failed:', error);
+        }
+      );
+
+      // ==========================================
+      // WHITE BOWL + BMW TOGETHER
+      // ==========================================
+      const bowlGroup = new THREE.Group();
+      bowlGroup.position.set(0, 0, -6);
+      scene.add(bowlGroup);
+
+      objLoader.load(
+        './base_tri.obj',
+        (obj) => {
+          obj.traverse((node) => {
+            if (node.isMesh) {
+              node.geometry.computeVertexNormals();
+              node.material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.8,
+                metalness: 0.08,
+                side: THREE.DoubleSide
+              });
+              node.castShadow = true;
+              node.receiveShadow = true;
+            }
+          });
+
+          obj.scale.set(60, 60, 60);
+          obj.position.set(0, -2, 0);
+
+          bowlGroup.add(obj);
+        },
+        undefined,
+        (error) => {
+          console.error('Bowl OBJ load failed:', error);
+        }
+      );
+
+      // BMW inside the bowl
+      gltfLoader.load(
+        './bmw.glb',
+        (gltf) => {
+          const bmw = gltf.scene;
+          enableShadows(bmw);
+
+          // Adjust these 3 lines if needed after you test in browser
+          bmw.scale.set(0.008, 0.008, 0.008);
+          bmw.position.set(0, -1.15, 0);
+          bmw.rotation.y = Math.PI / 4;
+
+          bowlGroup.add(bmw);
+        },
+        undefined,
+        (error) => {
+          console.error('BMW load failed:', error);
+        }
+      );
+
+      // ==========================================
+      // TEXTURED PRIMARY SHAPES
+      // ==========================================
+      const floatingObjects = [];
+
+      const brickTex = texLoader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+      brickTex.colorSpace = THREE.SRGBColorSpace;
+
+      const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+      const texturedBoxMat = new THREE.MeshStandardMaterial({ map: brickTex });
+
+      for (let i = 0; i < 3; i++) {
+        const cube = new THREE.Mesh(boxGeo, texturedBoxMat);
+        cube.position.set((i - 1) * 5, 8, -5);
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+        scene.add(cube);
+        floatingObjects.push(cube);
+      }
+
+      const geometries = [
+        new THREE.TorusGeometry(0.8, 0.3, 16, 100),
+        new THREE.SphereGeometry(1, 32, 16),
+        new THREE.IcosahedronGeometry(1, 0),
+        new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32)
+      ];
+
+      const artMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.1,
+        metalness: 1.0,
+        envMap: environmentMap
+      });
+
+      for (let i = 0; i < 20; i++) {
+        const mesh = new THREE.Mesh(
+          geometries[Math.floor(Math.random() * geometries.length)],
+          artMat.clone()
+        );
+        mesh.position.set(
+          (Math.random() - 0.5) * 30,
+          Math.random() * 10 + 5,
+          (Math.random() - 0.5) * 30
+        );
+        mesh.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          0
+        );
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+      }
+
+      // ==========================================
+      // RAYCASTER CLICK GLOW
+      // ==========================================
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      window.addEventListener('click', (event) => {
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(floatingObjects);
+
+        if (intersects.length > 0) {
+          const obj = intersects[0].object;
+          if (obj.material && obj.material.emissive) {
+            obj.material.emissive.setHex(Math.random() * 0xffffff);
+            obj.material.emissiveIntensity = 2;
+          }
+        }
+      });
+
+      // ==========================================
+      // GUI
+      // ==========================================
+      const gui = new GUI();
+
+      class ColorGUIHelper {
+        constructor(object, prop) {
+          this.object = object;
+          this.prop = prop;
+        }
+        get value() {
+          return `#${this.object[this.prop].getHexString()}`;
+        }
+        set value(hexString) {
+          this.object[this.prop].set(hexString);
+        }
+      }
+
+      function updateHelpers() {
+        pointLightHelper.update();
+        dirLightHelper.update();
+      }
+
+      const helpersParam = { visible: true };
+      gui.add(helpersParam, 'visible').name('Show Light Helpers').onChange((value) => {
+        pointLightHelper.visible = value && pointLight.visible;
+        dirLightHelper.visible = value && dirLight.visible;
+      });
+
+      const exhibitionFolder = gui.addFolder('Exhibition Controls');
+      const tourParams = { autoRotateArt: true, cinematicTour: false };
+      exhibitionFolder.add(tourParams, 'autoRotateArt').name('Animate Shapes');
+      exhibitionFolder.add(tourParams, 'cinematicTour').name('Cinematic Tour');
+
+      const hemiFolder = gui.addFolder('Hemisphere Light');
+      hemiFolder.add(hemiLight, 'visible').name('Enabled');
+      hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'color'), 'value').name('Sky Color');
+      hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'groundColor'), 'value').name('Ground Color');
+      hemiFolder.add(hemiLight, 'intensity', 0, 2, 0.01);
+
+      const pointFolder = gui.addFolder('Point Light');
+      pointFolder.add(pointLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) pointLightHelper.visible = value;
+      });
+      pointFolder.addColor(new ColorGUIHelper(pointLight, 'color'), 'value');
+      pointFolder.add(pointLight, 'intensity', 0, 50, 0.1);
+      pointFolder.add(pointLight.position, 'x', -20, 20).onChange(updateHelpers);
+      pointFolder.add(pointLight.position, 'y', 1, 20).onChange(updateHelpers);
+      pointFolder.add(pointLight.position, 'z', -20, 20).onChange(updateHelpers);
+
+      const dirFolder = gui.addFolder('Directional Light');
+      dirFolder.add(dirLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) dirLightHelper.visible = value;
+      });
+      dirFolder.addColor(new ColorGUIHelper(dirLight, 'color'), 'value').name('Color');
+      dirFolder.add(dirLight, 'intensity', 0, 5, 0.01);
+      dirFolder.add(dirLight.position, 'x', -30, 30).name('Sun X').onChange(updateHelpers);
+      dirFolder.add(dirLight.position, 'y', 1, 30).name('Sun Y').onChange(updateHelpers);
+      dirFolder.add(dirLight.position, 'z', -30, 30).name('Sun Z').onChange(updateHelpers);
+      dirFolder.add(dirLight.shadow, 'bias', -0.01, 0.01, 0.0001).name('Shadow Bias');
+
+      // ==========================================
+      // RESIZE
+      // ==========================================
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+      window.addEventListener('resize', onWindowResize);
+
+      // ==========================================
+      // ANIMATION LOOP
+      // ==========================================
+      const clock = new THREE.Clock();
+
+      function animate() {
+        const time = clock.getElapsedTime();
+
+        if (tourParams.autoRotateArt) {
+          floatingObjects.forEach((obj, ndx) => {
+            obj.rotation.x = time * (0.2 + ndx * 0.05);
+            obj.rotation.y = time * (0.2 + ndx * 0.05);
+            obj.position.y += Math.sin(time * 2 + ndx) * 0.005;
+          });
+        }
+
+        if (tourParams.cinematicTour) {
+          controls.enabled = false;
+          const radius = 35;
+          camera.position.x = Math.sin(time * 0.2) * radius;
+          camera.position.z = Math.cos(time * 0.2) * radius;
+          camera.position.y = 12 + Math.sin(time * 0.4) * 4;
+          camera.lookAt(0, 2, 0);
+        } else {
+          controls.enabled = true;
+          controls.update();
+        }
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>

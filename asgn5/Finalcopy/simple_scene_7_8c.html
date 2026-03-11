@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Auto-Scaled Exhibition</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #c { width: 100vw; height: 100vh; display: block; }
+      #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 1px 1px 2px black; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 15, 45); // Pulled back to see the giant bowl
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 2, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+
+    // ==========================================
+    // ENVIRONMENT
+    // ==========================================
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const environmentMap = cubeTextureLoader.load([
+      './pos-x.jpg', './neg-x.jpg', './pos-y.jpg', 
+      './neg-y.jpg', './pos-z.jpg', './neg-z.jpg'  
+    ]);
+    environmentMap.colorSpace = THREE.SRGBColorSpace;
+    scene.background = environmentMap;
+    scene.environment = environmentMap;
+
+    // ==========================================
+    // LIGHTING
+    // ==========================================
+    scene.add(new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.5));
+    
+    const pointLight = new THREE.PointLight(0xFFFFFF, 3, 50); 
+    pointLight.position.set(0, 10, 0); 
+    scene.add(pointLight);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2.5);
+    dirLight.position.set(15, 25, 15);
+    dirLight.castShadow = true; 
+    dirLight.shadow.bias = -0.0001;
+    dirLight.shadow.camera.left = -40;
+    dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    dirLight.shadow.mapSize.width = 2048; 
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const floatingObjects = []; 
+
+    // ==========================================
+    // THE MASTER AUTO-SCALING FUNCTION
+    // ==========================================
+    function autoPlaceAndScale(model, targetWidth, posX, posY, posZ) {
+        // 1. Measure the raw model
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        
+        // 2. Scale it to the target width
+        const maxDimension = Math.max(size.x, size.z); 
+        const scale = targetWidth / maxDimension;
+        model.scale.set(scale, scale, scale);
+
+        // 3. Re-measure the scaled model to find its true new center
+        const scaledBox = new THREE.Box3().setFromObject(model);
+        const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+
+        // 4. Snap it to the exact coordinates (Aligns the absolute BOTTOM to posY)
+        model.position.x = model.position.x - scaledCenter.x + posX;
+        model.position.y = model.position.y - scaledBox.min.y + posY;
+        model.position.z = model.position.z - scaledCenter.z + posZ;
+
+        scene.add(model);
+    }
+
+    // ==========================================
+    // LOAD CUSTOM CARS (Forced to be 8 units wide)
+    // ==========================================
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    // Duck
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => {
+        gltf.scene.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; }});
+        autoPlaceAndScale(gltf.scene, 4, 0, 0, 8); // Duck is smaller (4 units wide) in the front
+    });
+
+    // Mazda
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => {
+        gltf.scene.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; }});
+        autoPlaceAndScale(gltf.scene, 8, -10, 0, 0); // Forced to 8 units wide on the left
+    });
+
+    // McLaren
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => {
+        gltf.scene.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; }});
+        autoPlaceAndScale(gltf.scene, 8, 10, 0, 0); // Forced to 8 units wide on the right
+    });
+
+    // BMW (If you have it, uncomment this!)
+    /*
+    gltfLoader.load('./bmw.glb', (gltf) => {
+        gltf.scene.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; }});
+        autoPlaceAndScale(gltf.scene, 8, 0, 0, -8); // Forced to 8 units wide in the back
+    });
+    */
+
+    // ==========================================
+    // THE WHITE BOWL (Forced to be 60 units wide)
+    // ==========================================
+    objLoader.load('./base_tri.obj', (obj) => {
+        obj.traverse((node) => {
+            if (node.isMesh) {
+                // Pure white glowing material
+                node.material = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    emissive: 0x222222,
+                    roughness: 0.8,
+                    side: THREE.DoubleSide
+                });
+                node.receiveShadow = true;
+            }
+        });
+        
+        // Use our master function! Force the bowl to be 60 units wide, directly in the center, resting at Y: -0.5
+        autoPlaceAndScale(obj, 60, 0, -0.5, 0); 
+    });
+
+
+    // ==========================================
+    // 20+ SHAPES & ART
+    // ==========================================
+    const texLoader = new THREE.TextureLoader();
+    const brickTex = texLoader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+    brickTex.colorSpace = THREE.SRGBColorSpace;
+    const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const boxMat = new THREE.MeshStandardMaterial({ map: brickTex });
+    
+    for(let i=0; i<3; i++) {
+        const cube = new THREE.Mesh(boxGeo, boxMat);
+        cube.position.set((i - 1) * 5, 8, -4);
+        cube.castShadow = true;
+        scene.add(cube);
+        floatingObjects.push(cube);
+    }
+
+    const geometries = [
+        new THREE.TorusGeometry(0.8, 0.3, 16, 100),
+        new THREE.SphereGeometry(1, 32, 16),
+        new THREE.IcosahedronGeometry(1, 0)
+    ];
+    const artMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 1.0, envMap: environmentMap });
+
+    for(let i=0; i < 20; i++) {
+        const mesh = new THREE.Mesh(geometries[Math.floor(Math.random() * geometries.length)], artMat.clone()); 
+        mesh.position.set((Math.random() - 0.5) * 35, Math.random() * 10 + 5, (Math.random() - 0.5) * 35);
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        mesh.castShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+    }
+
+    // ==========================================
+    // INTERACTIVITY & GUI
+    // ==========================================
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    window.addEventListener('click', (event) => {
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(floatingObjects);
+        if (intersects.length > 0) {
+            intersects[0].object.material.emissive.setHex(Math.random() * 0xffffff);
+            intersects[0].object.material.emissiveIntensity = 2; 
+        }
+    });
+
+    const gui = new GUI();
+    const guiParams = { autoRotateArt: true, cinematicTour: false };
+    gui.add(guiParams, 'autoRotateArt').name('Animate Art');
+    gui.add(guiParams, 'cinematicTour').name('🎥 Cinematic Tour');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const time = clock.getElapsedTime();
+
+      if (guiParams.autoRotateArt) {
+          floatingObjects.forEach((obj, ndx) => {
+              obj.rotation.x = time * (0.2 + ndx * 0.05);
+              obj.rotation.y = time * (0.2 + ndx * 0.05);
+              obj.position.y += Math.sin(time * 2 + ndx) * 0.005; 
+          });
+      }
+
+      if (guiParams.cinematicTour) {
+          controls.enabled = false; 
+          const radius = 45;
+          camera.position.x = Math.sin(time * 0.2) * radius;
+          camera.position.z = Math.cos(time * 0.2) * radius;
+          camera.position.y = 15 + Math.sin(time * 0.4) * 5; 
+          camera.lookAt(0, 2, 0); 
+      } else {
+          controls.enabled = true;
+          controls.update(); 
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <div id="ui">
+        <h2>Surreal Car Exhibition</h2>
+        <p>Left Click + Drag: Orbit Camera</p>
+        <p>Scroll: Zoom</p>
+        <p><b>WOW FEATURE:</b> Click on any floating shape to make it glow!</p>
+    </div>
+    <canvas id="c"></canvas>
+  </body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Local Skybox and Reflections</title>
+    <style>
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+    import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+    import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
+
+    RectAreaLightUniformsLib.init();
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const fov = 45;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 200;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 10, 22);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 2, 0);
+    controls.update();
+
+    const scene = new THREE.Scene();
+
+    // ==========================================
+    // CUBEMAP: LOADING LOCAL FILES
+    // ==========================================
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const environmentMap = cubeTextureLoader.load([
+      './pos-x.jpg',
+      './neg-x.jpg',
+      './pos-y.jpg',
+      './neg-y.jpg',
+      './pos-z.jpg',
+      './neg-z.jpg'
+    ]);
+
+    environmentMap.colorSpace = THREE.SRGBColorSpace;
+    scene.background = environmentMap;
+    scene.environment = environmentMap;
+
+    // ==========================================
+    // GROUND PLANE - 4x WIDER
+    // ==========================================
+    const planeGeo = new THREE.PlaneGeometry(240, 240);
+    const planeMat = new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      transparent: true,
+      opacity: 0.8,
+      roughness: 0.1,
+      metalness: 0.5
+    });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = Math.PI * -0.5;
+    plane.position.y = -0.5;
+    plane.receiveShadow = true;
+    scene.add(plane);
+
+    // ==========================================
+    // LIGHTS
+    // ==========================================
+    const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.4);
+    scene.add(hemiLight);
+
+    const pointLight = new THREE.PointLight(0xFFFFFF, 3, 25);
+    pointLight.position.set(0, 8, 0);
+    pointLight.castShadow = true;
+    scene.add(pointLight);
+
+    const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
+    scene.add(pointLightHelper);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+    dirLight.position.set(8, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.bias = 0.0005;
+    dirLight.shadow.camera.left = -30;
+    dirLight.shadow.camera.right = 30;
+    dirLight.shadow.camera.top = 30;
+    dirLight.shadow.camera.bottom = -30;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.visible = false;
+    scene.add(dirLight);
+
+    const dirLightHelper = new THREE.DirectionalLightHelper(dirLight);
+    dirLightHelper.visible = false;
+    scene.add(dirLightHelper);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+    ambientLight.visible = false;
+    scene.add(ambientLight);
+
+    const spotLight = new THREE.SpotLight(0xffffff, 15, 80, Math.PI / 6, 0.3, 1);
+    spotLight.position.set(0, 18, 10);
+    spotLight.target.position.set(0, 0, -3);
+    spotLight.castShadow = true;
+    spotLight.visible = false;
+    scene.add(spotLight);
+    scene.add(spotLight.target);
+
+    const spotLightHelper = new THREE.SpotLightHelper(spotLight);
+    spotLightHelper.visible = false;
+    scene.add(spotLightHelper);
+
+    const rectLight = new THREE.RectAreaLight(0xffffff, 8, 10, 6);
+    rectLight.position.set(0, 8, 12);
+    rectLight.lookAt(0, 1, -3);
+    rectLight.visible = false;
+    scene.add(rectLight);
+
+    const rectLightHelper = new RectAreaLightHelper(rectLight);
+    rectLight.add(rectLightHelper);
+    rectLightHelper.visible = false;
+
+    // ==========================================
+    // LOAD MODELS
+    // ==========================================
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    function enableShadows(model) {
+      model.traverse((node) => {
+        if (node.isMesh) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+        }
+      });
+    }
+
+    gltfLoader.load(
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
+      (gltf) => {
+        const duck = gltf.scene;
+        duck.position.set(0, 0, 3);
+        enableShadows(duck);
+        scene.add(duck);
+      }
+    );
+
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => {
+      const mazda = gltf.scene;
+      mazda.position.set(-4, 0, 0);
+      enableShadows(mazda);
+      scene.add(mazda);
+    });
+
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => {
+      const mclaren = gltf.scene;
+      mclaren.position.set(4, 0, 0);
+      enableShadows(mclaren);
+      scene.add(mclaren);
+    });
+
+    // ==========================================
+    // BOWL EXHIBIT WITH BMW INSIDE - 4x WIDER
+    // ==========================================
+    const bowlExhibit = new THREE.Group();
+    bowlExhibit.position.set(0, 0, -3);
+    scene.add(bowlExhibit);
+
+    objLoader.load('./base_tri.obj', (obj) => {
+      obj.traverse((node) => {
+        if (node.isMesh) {
+          node.material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.8,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+          });
+          node.castShadow = true;
+          node.receiveShadow = true;
+        }
+      });
+
+      obj.scale.set(4, 4, 4);
+      obj.position.set(0, 0, 0);
+      bowlExhibit.add(obj);
+    });
+
+    gltfLoader.load('./bmw.glb', (gltf) => {
+      const bmw = gltf.scene;
+      enableShadows(bmw);
+
+      // Scaled up to still read well inside the now-larger bowl
+      bmw.scale.set(0.04, 0.04, 0.04);
+      bmw.position.set(0, 1.4, 0);
+      bmw.rotation.y = Math.PI / 4;
+
+      bowlExhibit.add(bmw);
+    });
+
+    // ==========================================
+    // GUI
+    // ==========================================
+    const gui = new GUI();
+
+    class ColorGUIHelper {
+      constructor(object, prop) {
+        this.object = object;
+        this.prop = prop;
+      }
+      get value() {
+        return `#${this.object[this.prop].getHexString()}`;
+      }
+      set value(hexString) {
+        this.object[this.prop].set(hexString);
+      }
+    }
+
+    function updateHelpers() {
+      pointLightHelper.update();
+      dirLightHelper.update();
+      spotLightHelper.update();
+      rectLightHelper.visible = rectLight.visible && helpersParam.visible;
+    }
+
+    const helpersParam = { visible: true };
+    gui.add(helpersParam, 'visible').name('Show Light Helpers').onChange(value => {
+      pointLightHelper.visible = value && pointLight.visible;
+      dirLightHelper.visible = value && dirLight.visible;
+      spotLightHelper.visible = value && spotLight.visible;
+      rectLightHelper.visible = value && rectLight.visible;
+    });
+
+    const hemiFolder = gui.addFolder('Hemisphere Light');
+    hemiFolder.add(hemiLight, 'visible').name('Enabled');
+    hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'color'), 'value').name('Sky Color');
+    hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'groundColor'), 'value').name('Ground Color');
+    hemiFolder.add(hemiLight, 'intensity', 0, 2, 0.01);
+
+    const pointFolder = gui.addFolder('Point Light');
+    pointFolder.add(pointLight, 'visible').name('Enabled').onChange(value => {
+      if (helpersParam.visible) pointLightHelper.visible = value;
+    });
+    pointFolder.addColor(new ColorGUIHelper(pointLight, 'color'), 'value');
+    pointFolder.add(pointLight, 'intensity', 0, 50, 0.1);
+    pointFolder.add(pointLight.position, 'x', -20, 20).onChange(updateHelpers);
+    pointFolder.add(pointLight.position, 'y', 1, 20).onChange(updateHelpers);
+    pointFolder.add(pointLight.position, 'z', -20, 20).onChange(updateHelpers);
+
+    const dirFolder = gui.addFolder('Directional Light');
+    dirFolder.add(dirLight, 'visible').name('Enabled').onChange(value => {
+      if (helpersParam.visible) dirLightHelper.visible = value;
+    });
+    dirFolder.addColor(new ColorGUIHelper(dirLight, 'color'), 'value').name('Color');
+    dirFolder.add(dirLight, 'intensity', 0, 5, 0.01);
+    dirFolder.add(dirLight.position, 'x', -30, 30).name('Sun X').onChange(updateHelpers);
+    dirFolder.add(dirLight.position, 'y', 1, 30).name('Sun Y').onChange(updateHelpers);
+    dirFolder.add(dirLight.position, 'z', -30, 30).name('Sun Z').onChange(updateHelpers);
+    dirFolder.add(dirLight.shadow, 'bias', -0.01, 0.01, 0.0001).name('Shadow Bias');
+
+    const ambientFolder = gui.addFolder('Ambient Light');
+    ambientFolder.add(ambientLight, 'visible').name('Enabled');
+    ambientFolder.addColor(new ColorGUIHelper(ambientLight, 'color'), 'value').name('Color');
+    ambientFolder.add(ambientLight, 'intensity', 0, 3, 0.01);
+
+    const spotFolder = gui.addFolder('Spot Light');
+    spotFolder.add(spotLight, 'visible').name('Enabled').onChange(value => {
+      if (helpersParam.visible) spotLightHelper.visible = value;
+    });
+    spotFolder.addColor(new ColorGUIHelper(spotLight, 'color'), 'value').name('Color');
+    spotFolder.add(spotLight, 'intensity', 0, 50, 0.1);
+    spotFolder.add(spotLight.position, 'x', -30, 30).onChange(updateHelpers);
+    spotFolder.add(spotLight.position, 'y', 1, 30).onChange(updateHelpers);
+    spotFolder.add(spotLight.position, 'z', -30, 30).onChange(updateHelpers);
+    spotFolder.add(spotLight, 'angle', 0.1, Math.PI / 2, 0.01).onChange(updateHelpers);
+    spotFolder.add(spotLight, 'penumbra', 0, 1, 0.01).onChange(updateHelpers);
+    spotFolder.add(spotLight.target.position, 'x', -20, 20).name('Target X').onChange(updateHelpers);
+    spotFolder.add(spotLight.target.position, 'y', -5, 10).name('Target Y').onChange(updateHelpers);
+    spotFolder.add(spotLight.target.position, 'z', -20, 20).name('Target Z').onChange(updateHelpers);
+
+    const rectFolder = gui.addFolder('RectArea Light');
+    rectFolder.add(rectLight, 'visible').name('Enabled').onChange(value => {
+      if (helpersParam.visible) rectLightHelper.visible = value;
+    });
+    rectFolder.addColor(new ColorGUIHelper(rectLight, 'color'), 'value').name('Color');
+    rectFolder.add(rectLight, 'intensity', 0, 20, 0.1);
+    rectFolder.add(rectLight.position, 'x', -30, 30).onChange(updateHelpers);
+    rectFolder.add(rectLight.position, 'y', 1, 30).onChange(updateHelpers);
+    rectFolder.add(rectLight.position, 'z', -30, 30).onChange(updateHelpers);
+    rectFolder.add(rectLight, 'width', 1, 20, 0.1);
+    rectFolder.add(rectLight, 'height', 1, 20, 0.1);
+
+    // ==========================================
+    // RESIZE + ANIMATE
+    // ==========================================
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    function animate() {
+      controls.update();
+      spotLightHelper.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

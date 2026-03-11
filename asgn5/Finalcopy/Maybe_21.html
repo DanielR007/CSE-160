@@ -1,0 +1,1212 @@
+html = r'''<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Nopon Hall of Machines</title>
+    <style>
+      body { margin: 0; overflow: hidden; background: #111; }
+      #c { width: 100vw; height: 100vh; display: block; }
+      #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-family: sans-serif;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+        z-index: 10;
+      }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+  </head>
+
+  <body>
+    <div id="ui">
+      <h2>Nopon Hall of Machines</h2>
+      <p>Left Click + Drag: Orbit Camera</p>
+      <p>Scroll: Zoom</p>
+      <p><b>WOW FEATURE:</b> Click floating relics to make them glow.</p>
+      <p><b>Extra feature note:</b> Nopon hunter hero figure, shrine props, orbiting relic rings, lighting presets, glow pedestals, cinematic tour, and world-light toggle.</p>
+    </div>
+
+    <canvas id="c"></canvas>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+      import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+      import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
+
+      RectAreaLightUniformsLib.init();
+
+      const canvas = document.querySelector('#c');
+      const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+
+      const scene = new THREE.Scene();
+
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 12, 26);
+
+      const controls = new OrbitControls(camera, canvas);
+      controls.target.set(0, 2, 0);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.update();
+
+      const FLOOR_Y = -2.05;
+      const centerTarget = new THREE.Vector3(0, 2, 0);
+      const exhibitTargets = {
+        mazda: new THREE.Vector3(-8, 0.5, 0),
+        mclaren: new THREE.Vector3(8, 0.5, 0),
+        bmw: new THREE.Vector3(0, 0.5, -8),
+        duck: new THREE.Vector3(0, 0.5, 8),
+        nopon: new THREE.Vector3(-15, 1.5, -13),
+        center: new THREE.Vector3(0, 2, 0),
+      };
+
+      // ==========================================
+      // SKYBOX / ENVIRONMENT
+      // ==========================================
+      const cubeTextureLoader = new THREE.CubeTextureLoader();
+      const environmentMap = cubeTextureLoader.load([
+        './pos-x.jpg',
+        './neg-x.jpg',
+        './pos-y.jpg',
+        './neg-y.jpg',
+        './pos-z.jpg',
+        './neg-z.jpg'
+      ]);
+      environmentMap.colorSpace = THREE.SRGBColorSpace;
+
+      const darkBackground = new THREE.Color(0x111111);
+
+      const worldParams = {
+        showBackground: true,
+        useEnvironmentLight: true,
+      };
+
+      function applyWorldSettings() {
+        scene.background = worldParams.showBackground ? environmentMap : darkBackground;
+        scene.environment = worldParams.useEnvironmentLight ? environmentMap : null;
+      }
+
+      applyWorldSettings();
+
+      // ==========================================
+      // FLOOR
+      // ==========================================
+      const floorGeo = new THREE.PlaneGeometry(240, 240);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2a2a,
+        roughness: 0.45,
+        metalness: 0.15
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = FLOOR_Y;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // ==========================================
+      // DISPLAY CYLINDER - OUTER ONLY
+      // ==========================================
+      const displayGroup = new THREE.Group();
+      displayGroup.position.set(0, FLOOR_Y, 0);
+      scene.add(displayGroup);
+
+      const displayRadius = 18;
+      const displayHeight = 8;
+
+      const wallGeo = new THREE.CylinderGeometry(displayRadius, displayRadius, displayHeight, 64, 1, true);
+      const wallMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.14,
+        roughness: 0.08,
+        metalness: 0.45,
+        side: THREE.DoubleSide
+      });
+      const wall = new THREE.Mesh(wallGeo, wallMat);
+      wall.position.set(0, displayHeight / 2, 0);
+      wall.receiveShadow = true;
+      displayGroup.add(wall);
+
+      const rimGeo = new THREE.TorusGeometry(displayRadius, 0.12, 16, 100);
+      const sharedRimMat = new THREE.MeshStandardMaterial({
+        color: 0xc9c12e,
+        roughness: 0.2,
+        metalness: 0.8
+      });
+
+      const topRim = new THREE.Mesh(rimGeo, sharedRimMat);
+      topRim.rotation.x = Math.PI / 2;
+      topRim.position.set(0, displayHeight, 0);
+      topRim.castShadow = true;
+      topRim.receiveShadow = true;
+      displayGroup.add(topRim);
+
+      const bottomRim = new THREE.Mesh(rimGeo, sharedRimMat);
+      bottomRim.rotation.x = Math.PI / 2;
+      bottomRim.position.set(0, 0, 0);
+      bottomRim.castShadow = true;
+      bottomRim.receiveShadow = true;
+      displayGroup.add(bottomRim);
+
+      // ==========================================
+      // NOPON HUNTER SHRINE RING
+      // ==========================================
+      const shrineGroup = new THREE.Group();
+      shrineGroup.position.y = FLOOR_Y;
+      scene.add(shrineGroup);
+
+      const shrineRingGeo = new THREE.TorusGeometry(26, 0.18, 16, 120);
+      const shrineRingMat = new THREE.MeshStandardMaterial({
+        color: 0x7d531d,
+        emissive: 0x3a2000,
+        emissiveIntensity: 0.7,
+        roughness: 0.55,
+        metalness: 0.25,
+      });
+      const shrineRing = new THREE.Mesh(shrineRingGeo, shrineRingMat);
+      shrineRing.rotation.x = Math.PI / 2;
+      shrineRing.position.y = 0.08;
+      shrineGroup.add(shrineRing);
+
+      // ==========================================
+      // LIGHTS
+      // ==========================================
+      const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.4);
+      scene.add(hemiLight);
+
+      const pointLight = new THREE.PointLight(0xFFFFFF, 3, 40);
+      pointLight.position.set(0, 8, 0);
+      pointLight.castShadow = true;
+      scene.add(pointLight);
+
+      const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
+      scene.add(pointLightHelper);
+
+      const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+      dirLight.position.set(10, 15, 10);
+      dirLight.castShadow = true;
+      dirLight.shadow.bias = 0.0005;
+      dirLight.shadow.camera.left = -25;
+      dirLight.shadow.camera.right = 25;
+      dirLight.shadow.camera.top = 25;
+      dirLight.shadow.camera.bottom = -25;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.visible = false;
+      scene.add(dirLight);
+
+      const dirLightHelper = new THREE.DirectionalLightHelper(dirLight);
+      dirLightHelper.visible = false;
+      scene.add(dirLightHelper);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+      ambientLight.visible = false;
+      scene.add(ambientLight);
+
+      const spotLight = new THREE.SpotLight(0xffffff, 15, 90, Math.PI / 6, 0.3, 1);
+      spotLight.position.set(0, 18, 10);
+      spotLight.target.position.set(0, 1, 0);
+      spotLight.castShadow = true;
+      spotLight.visible = false;
+      scene.add(spotLight);
+      scene.add(spotLight.target);
+
+      const spotLightHelper = new THREE.SpotLightHelper(spotLight);
+      spotLightHelper.visible = false;
+      scene.add(spotLightHelper);
+
+      const rectLight = new THREE.RectAreaLight(0xffffff, 8, 10, 6);
+      rectLight.position.set(0, 8, 12);
+      rectLight.lookAt(0, 1, 0);
+      rectLight.visible = false;
+      scene.add(rectLight);
+
+      const rectLightHelper = new RectAreaLightHelper(rectLight);
+      rectLight.add(rectLightHelper);
+      rectLightHelper.visible = false;
+
+      const followSpot = new THREE.SpotLight(0xffffff, 0, 80, Math.PI / 7, 0.45, 1);
+      followSpot.position.set(0, 16, 0);
+      followSpot.castShadow = true;
+      followSpot.visible = true;
+      scene.add(followSpot);
+      scene.add(followSpot.target);
+
+      const followSpotHelper = new THREE.SpotLightHelper(followSpot);
+      followSpotHelper.visible = false;
+      scene.add(followSpotHelper);
+
+      // ==========================================
+      // LOADERS / HELPERS
+      // ==========================================
+      const gltfLoader = new GLTFLoader();
+      const objLoader = new OBJLoader();
+      const texLoader = new THREE.TextureLoader();
+
+      function enableShadows(model) {
+        model.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+          }
+        });
+      }
+
+      function fitModelToTargetSize(root, targetSize) {
+        root.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(root);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim === 0) return;
+
+        const scale = targetSize / maxDim;
+        root.scale.multiplyScalar(scale);
+
+        root.updateMatrixWorld(true);
+        const newBox = new THREE.Box3().setFromObject(root);
+        const center = new THREE.Vector3();
+        const min = new THREE.Vector3();
+        newBox.getCenter(center);
+        min.copy(newBox.min);
+
+        root.position.x -= center.x;
+        root.position.z -= center.z;
+        root.position.y -= min.y;
+      }
+
+      function placeOnFloor(root, x, z) {
+        root.position.x += x;
+        root.position.y += FLOOR_Y;
+        root.position.z += z;
+      }
+
+      function setMaterialPolygonOffset(root) {
+        root.traverse((node) => {
+          if (node.isMesh && node.material) {
+            node.material.polygonOffset = true;
+            node.material.polygonOffsetFactor = 1;
+            node.material.polygonOffsetUnits = 1;
+          }
+        });
+      }
+
+      function makePedestal(x, z, colorHex) {
+        const pedestalGroup = new THREE.Group();
+
+        const baseGeo = new THREE.CylinderGeometry(2.3, 2.3, 0.18, 48);
+        const baseMat = new THREE.MeshStandardMaterial({
+          color: 0x111111,
+          emissive: colorHex,
+          emissiveIntensity: 1.1,
+          roughness: 0.35,
+          metalness: 0.25
+        });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.set(x, FLOOR_Y + 0.09, z);
+        base.receiveShadow = true;
+        pedestalGroup.add(base);
+
+        const ringGeo = new THREE.TorusGeometry(2.15, 0.06, 12, 64);
+        const ringMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: colorHex,
+          emissiveIntensity: 1.6,
+          roughness: 0.15,
+          metalness: 0.8
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(x, FLOOR_Y + 0.16, z);
+        pedestalGroup.add(ring);
+
+        const glowGeo = new THREE.CircleGeometry(2.0, 48);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: colorHex,
+          transparent: true,
+          opacity: 0.22,
+          side: THREE.DoubleSide
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.set(x, FLOOR_Y + 0.17, z);
+        pedestalGroup.add(glow);
+
+        scene.add(pedestalGroup);
+        return { base, ring, glow, colorHex };
+      }
+
+      function makeBanner(x, z, rotY, colorHex, accentHex) {
+        const banner = new THREE.Group();
+        banner.position.set(x, FLOOR_Y, z);
+        banner.rotation.y = rotY;
+
+        const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 7, 12);
+        const poleMat = new THREE.MeshStandardMaterial({ color: 0x6b4a1f, roughness: 0.7, metalness: 0.15 });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.set(0, 3.5, 0);
+        pole.castShadow = true;
+        banner.add(pole);
+
+        const crossbarGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.1, 12);
+        const crossbar = new THREE.Mesh(crossbarGeo, poleMat);
+        crossbar.rotation.z = Math.PI / 2;
+        crossbar.position.set(0.85, 6.2, 0);
+        banner.add(crossbar);
+
+        const clothGeo = new THREE.PlaneGeometry(1.8, 2.6, 6, 10);
+        const clothMat = new THREE.MeshStandardMaterial({
+          color: colorHex,
+          emissive: accentHex,
+          emissiveIntensity: 0.18,
+          side: THREE.DoubleSide,
+          roughness: 0.9,
+          metalness: 0.05,
+        });
+        const cloth = new THREE.Mesh(clothGeo, clothMat);
+        cloth.position.set(0.9, 5.0, 0);
+        cloth.castShadow = true;
+        banner.add(cloth);
+
+        const sigilGeo = new THREE.RingGeometry(0.24, 0.44, 6);
+        const sigilMat = new THREE.MeshStandardMaterial({
+          color: 0xfff4bd,
+          emissive: accentHex,
+          emissiveIntensity: 0.5,
+          side: THREE.DoubleSide,
+          roughness: 0.3,
+          metalness: 0.6,
+        });
+        const sigil = new THREE.Mesh(sigilGeo, sigilMat);
+        sigil.position.set(0.9, 5.2, 0.01);
+        banner.add(sigil);
+
+        scene.add(banner);
+        return { banner, cloth, sigil };
+      }
+
+      function makeRelicStand(x, z, colorHex) {
+        const group = new THREE.Group();
+        group.position.set(x, FLOOR_Y, z);
+
+        const base = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.9, 1.1, 0.6, 32),
+          new THREE.MeshStandardMaterial({ color: 0x3a2b1b, roughness: 0.8, metalness: 0.1 })
+        );
+        base.position.y = 0.3;
+        base.receiveShadow = true;
+        group.add(base);
+
+        const pillar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.18, 2.4, 16),
+          new THREE.MeshStandardMaterial({ color: 0x79542b, roughness: 0.6, metalness: 0.2 })
+        );
+        pillar.position.y = 1.5;
+        pillar.castShadow = true;
+        group.add(pillar);
+
+        const relic = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.7),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: colorHex,
+            emissiveIntensity: 0.9,
+            roughness: 0.15,
+            metalness: 0.85
+          })
+        );
+        relic.position.y = 3.0;
+        relic.castShadow = true;
+        group.add(relic);
+
+        scene.add(group);
+        return { group, relic };
+      }
+
+      function makeNoponHunter() {
+        const group = new THREE.Group();
+        group.position.set(-15, FLOOR_Y, -13);
+
+        const furMat = new THREE.MeshStandardMaterial({ color: 0xe7c85e, roughness: 0.95, metalness: 0.02 });
+        const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf7f1dc, roughness: 0.92, metalness: 0.02 });
+        const leatherMat = new THREE.MeshStandardMaterial({ color: 0x6e4520, roughness: 0.85, metalness: 0.12 });
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x9aa8c0, roughness: 0.3, metalness: 0.85 });
+        const gemMat = new THREE.MeshStandardMaterial({ color: 0x4fd7ff, emissive: 0x0f7fff, emissiveIntensity: 1.1, roughness: 0.15, metalness: 0.5 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.25, metalness: 0.1 });
+
+        const body = new THREE.Mesh(new THREE.SphereGeometry(2.0, 32, 24), furMat);
+        body.scale.set(1.2, 1.05, 1.0);
+        body.position.y = 2.5;
+        body.castShadow = true;
+        body.receiveShadow = true;
+        group.add(body);
+
+        const belly = new THREE.Mesh(new THREE.SphereGeometry(1.35, 24, 18), bellyMat);
+        belly.scale.set(0.95, 0.85, 0.55);
+        belly.position.set(0, 2.0, 1.25);
+        belly.castShadow = true;
+        group.add(belly);
+
+        const headTuft = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.2, 12), leatherMat);
+        headTuft.position.set(0, 4.7, 0.1);
+        headTuft.rotation.z = 0.15;
+        group.add(headTuft);
+
+        const headTuft2 = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.9, 12), leatherMat);
+        headTuft2.position.set(-0.35, 4.4, 0.0);
+        headTuft2.rotation.z = -0.25;
+        group.add(headTuft2);
+
+        function makeEar(side) {
+          const ear = new THREE.Group();
+          const sign = side === 'left' ? -1 : 1;
+
+          const earBase = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.2, 6, 12), furMat);
+          earBase.rotation.z = sign * -0.85;
+          earBase.position.set(sign * 1.55, 3.4, -0.15);
+          ear.add(earBase);
+
+          const feather = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.75, 10), bellyMat);
+          feather.position.set(sign * 2.15, 3.55, -0.12);
+          feather.rotation.z = sign * -0.95;
+          ear.add(feather);
+
+          return ear;
+        }
+        const earL = makeEar('left');
+        const earR = makeEar('right');
+        group.add(earL, earR);
+
+        const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), eyeMat);
+        const eyeR = eyeL.clone();
+        eyeL.position.set(-0.45, 3.0, 1.65);
+        eyeR.position.set(0.45, 3.0, 1.65);
+        group.add(eyeL, eyeR);
+
+        const beak = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.7, 12), new THREE.MeshStandardMaterial({ color: 0xf09a2a, roughness: 0.85, metalness: 0.05 }));
+        beak.rotation.x = Math.PI / 2;
+        beak.position.set(0, 2.55, 1.85);
+        group.add(beak);
+
+        const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.95, 4, 10), furMat);
+        const armR = armL.clone();
+        armL.rotation.z = 0.55;
+        armR.rotation.z = -0.55;
+        armL.position.set(-1.4, 2.15, 1.0);
+        armR.position.set(1.4, 2.15, 1.0);
+        group.add(armL, armR);
+
+        const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.85, 4, 10), leatherMat);
+        const legR = legL.clone();
+        legL.position.set(-0.55, 0.95, 0.25);
+        legR.position.set(0.55, 0.95, 0.25);
+        group.add(legL, legR);
+
+        const footL = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), bellyMat);
+        const footR = footL.clone();
+        footL.scale.set(1.25, 0.45, 1.55);
+        footR.scale.set(1.25, 0.45, 1.55);
+        footL.position.set(-0.55, 0.32, 0.55);
+        footR.position.set(0.55, 0.32, 0.55);
+        group.add(footL, footR);
+
+        const satchel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.5), leatherMat);
+        satchel.position.set(1.45, 1.9, -0.45);
+        satchel.rotation.z = -0.2;
+        satchel.castShadow = true;
+        group.add(satchel);
+
+        const strap = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.05, 8, 40, Math.PI), leatherMat);
+        strap.rotation.z = Math.PI / 4;
+        strap.rotation.y = Math.PI / 2;
+        strap.position.set(0.2, 2.7, 0.1);
+        group.add(strap);
+
+        const spearPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.6, 12), metalMat);
+        spearPole.position.set(-2.2, 3.1, -0.4);
+        spearPole.rotation.z = 0.6;
+        spearPole.castShadow = true;
+        group.add(spearPole);
+
+        const spearTip = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.75, 12), gemMat);
+        spearTip.position.set(-3.45, 4.95, -0.35);
+        spearTip.rotation.z = 0.6;
+        group.add(spearTip);
+
+        const scarf = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.12, 8, 32), new THREE.MeshStandardMaterial({
+          color: 0x8f273c,
+          emissive: 0x330000,
+          emissiveIntensity: 0.25,
+          roughness: 0.85,
+          metalness: 0.05
+        }));
+        scarf.rotation.x = Math.PI / 2;
+        scarf.position.set(0, 2.95, 0.18);
+        group.add(scarf);
+
+        const tail = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.65, 8), furMat);
+        tail.position.set(0, 1.65, -1.55);
+        tail.rotation.x = -0.95;
+        group.add(tail);
+
+        const pedestal = makePedestal(-15, -13, 0x4fd7ff);
+
+        scene.add(group);
+        return {
+          group,
+          parts: { earL, earR, headTuft, headTuft2, spearTip, scarf, satchel, body },
+          pedestal,
+          basePosY: group.position.y,
+        };
+      }
+
+      const loadedExhibits = {
+        duck: null,
+        mazda: null,
+        mclaren: null,
+        bmw: null
+      };
+
+      gltfLoader.load(
+        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
+        (gltf) => {
+          const duck = gltf.scene;
+          enableShadows(duck);
+          fitModelToTargetSize(duck, 3.0);
+          duck.rotation.y = Math.PI / 6;
+          placeOnFloor(duck, 0, 8);
+          scene.add(duck);
+          loadedExhibits.duck = duck;
+        },
+        undefined,
+        (error) => console.error('Duck load failed:', error)
+      );
+
+      gltfLoader.load(
+        './Mazda RX-7.glb',
+        (gltf) => {
+          const mazda = gltf.scene;
+          enableShadows(mazda);
+          fitModelToTargetSize(mazda, 6.0);
+          setMaterialPolygonOffset(mazda);
+          mazda.rotation.y = Math.PI / 5;
+          placeOnFloor(mazda, -8, 0);
+          scene.add(mazda);
+          loadedExhibits.mazda = mazda;
+        },
+        undefined,
+        (error) => console.error('Mazda load failed:', error)
+      );
+
+      gltfLoader.load(
+        './uploads_files_2815692_Mclaren+Senna.glb',
+        (gltf) => {
+          const mclaren = gltf.scene;
+          enableShadows(mclaren);
+          fitModelToTargetSize(mclaren, 6.0);
+          setMaterialPolygonOffset(mclaren);
+          mclaren.rotation.y = -Math.PI / 6;
+          placeOnFloor(mclaren, 8, 0);
+          scene.add(mclaren);
+          loadedExhibits.mclaren = mclaren;
+        },
+        undefined,
+        (error) => console.error('McLaren load failed:', error)
+      );
+
+      objLoader.load(
+        './base_tri.obj',
+        (obj) => {
+          obj.traverse((node) => {
+            if (node.isMesh) {
+              node.geometry.computeVertexNormals();
+              node.material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.35,
+                metalness: 0.65,
+                side: THREE.DoubleSide
+              });
+              node.castShadow = true;
+              node.receiveShadow = true;
+            }
+          });
+
+          fitModelToTargetSize(obj, 6.0);
+          obj.rotation.y = Math.PI / 4;
+          placeOnFloor(obj, 0, -8);
+          scene.add(obj);
+          loadedExhibits.bmw = obj;
+        },
+        undefined,
+        (error) => console.error('BMW OBJ load failed:', error)
+      );
+
+      const pedestals = {
+        mazda: makePedestal(-8, 0, 0x3366ff),
+        mclaren: makePedestal(8, 0, 0xff3399),
+        bmw: makePedestal(0, -8, 0xffffff),
+        duck: makePedestal(0, 8, 0xffcc00),
+      };
+
+      const noponHero = makeNoponHunter();
+      const banners = [
+        makeBanner(-23, -5, Math.PI / 8, 0x8f273c, 0x3a0000),
+        makeBanner(-23, 5, Math.PI / 10, 0x355a8f, 0x001d44),
+        makeBanner(23, -5, -Math.PI / 8, 0x8f6d22, 0x443000),
+        makeBanner(23, 5, -Math.PI / 10, 0x2f7f55, 0x003315),
+      ];
+
+      const relicStands = [
+        makeRelicStand(-20, -16, 0x4fd7ff),
+        makeRelicStand(-20, 16, 0xffcc55),
+        makeRelicStand(20, -16, 0xff44aa),
+        makeRelicStand(20, 16, 0x77ff99),
+      ];
+
+      const floatingObjects = [];
+      const floatingAnimationData = [];
+      const orbitingObjects = [];
+
+      const brickTex = texLoader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+      brickTex.colorSpace = THREE.SRGBColorSpace;
+
+      const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+      const texturedBoxMat = new THREE.MeshStandardMaterial({ map: brickTex });
+
+      for (let i = 0; i < 3; i++) {
+        const cube = new THREE.Mesh(boxGeo, texturedBoxMat);
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+        scene.add(cube);
+        floatingObjects.push(cube);
+
+        orbitingObjects.push({
+          mesh: cube,
+          radius: 7 + i * 0.8,
+          angleOffset: i * (Math.PI * 2 / 3),
+          speed: 0.18 + i * 0.03,
+          baseY: 4.7 + i * 0.15,
+          bobAmp: 0.35,
+        });
+      }
+
+      const geometries = [
+        new THREE.TorusGeometry(0.8, 0.3, 16, 100),
+        new THREE.SphereGeometry(1, 32, 16),
+        new THREE.IcosahedronGeometry(1, 0),
+        new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32)
+      ];
+
+      const artMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.1,
+        metalness: 1.0,
+      });
+
+      for (let i = 0; i < 12; i++) {
+        const mesh = new THREE.Mesh(
+          geometries[i % geometries.length],
+          artMat.clone()
+        );
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+
+        orbitingObjects.push({
+          mesh,
+          radius: 11.5 + (i % 3) * 1.2,
+          angleOffset: i * (Math.PI * 2 / 12),
+          speed: 0.08 + (i % 4) * 0.015,
+          baseY: 5.5 + (i % 3) * 1.2,
+          bobAmp: 0.45 + (i % 2) * 0.1,
+        });
+      }
+
+      for (let i = 0; i < 8; i++) {
+        const mesh = new THREE.Mesh(
+          geometries[(i + 1) % geometries.length],
+          artMat.clone()
+        );
+
+        mesh.scale.setScalar(0.9 + (i % 3) * 0.2);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+
+        orbitingObjects.push({
+          mesh,
+          radius: 6.8 + (i % 2) * 1.1,
+          angleOffset: i * (Math.PI * 2 / 8),
+          speed: -0.14 - (i % 3) * 0.02,
+          baseY: 8.5 + (i % 2) * 0.8,
+          bobAmp: 0.25,
+        });
+      }
+
+      for (let i = 0; i < 10; i++) {
+        const geom = i % 2 === 0
+          ? new THREE.RingGeometry(0.45, 0.8, 20)
+          : new THREE.OctahedronGeometry(0.7);
+        const mat = new THREE.MeshStandardMaterial({
+          color: i % 2 === 0 ? 0xfff1aa : 0x9be7ff,
+          emissive: i % 2 === 0 ? 0x664400 : 0x003355,
+          emissiveIntensity: 0.35,
+          roughness: 0.22,
+          metalness: 0.82,
+          side: THREE.DoubleSide,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+
+        orbitingObjects.push({
+          mesh,
+          centerX: -15,
+          centerZ: -13,
+          radius: 3.2 + (i % 3) * 0.8,
+          angleOffset: i * (Math.PI * 2 / 10),
+          speed: 0.22 + (i % 3) * 0.05,
+          baseY: 5.0 + (i % 4) * 0.55,
+          bobAmp: 0.22,
+        });
+      }
+
+      floatingObjects.forEach((mesh, i) => {
+        floatingAnimationData.push({
+          mesh,
+          spinX: 0.2 + (i % 5) * 0.06,
+          spinY: 0.18 + (i % 7) * 0.05,
+          phase: i * 0.7,
+        });
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      window.addEventListener('click', (event) => {
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(floatingObjects);
+
+        if (intersects.length > 0) {
+          const obj = intersects[0].object;
+          if (obj.material && obj.material.emissive) {
+            obj.material.emissive.setHex(Math.random() * 0xffffff);
+            obj.material.emissiveIntensity = 2.2;
+          }
+        }
+      });
+
+      const gui = new GUI({ title: 'Controls' });
+
+      class ColorGUIHelper {
+        constructor(object, prop) {
+          this.object = object;
+          this.prop = prop;
+        }
+        get value() {
+          return `#${this.object[this.prop].getHexString()}`;
+        }
+        set value(hexString) {
+          this.object[this.prop].set(hexString);
+        }
+      }
+
+      function updateHelpers() {
+        pointLightHelper.update();
+        dirLightHelper.update();
+        spotLightHelper.update();
+        followSpotHelper.update();
+        rectLightHelper.visible = rectLight.visible && helpersParam.visible;
+      }
+
+      const helpersParam = { visible: true };
+      gui.add(helpersParam, 'visible').name('Show Light Helpers').onChange((value) => {
+        pointLightHelper.visible = value && pointLight.visible;
+        dirLightHelper.visible = value && dirLight.visible;
+        spotLightHelper.visible = value && spotLight.visible;
+        followSpotHelper.visible = value && followSpot.visible && followSpot.intensity > 0;
+        rectLightHelper.visible = value && rectLight.visible;
+      });
+
+      const exhibitionFolder = gui.addFolder('Exhibition Controls');
+      const tourParams = {
+        autoRotateArt: true,
+        cinematicTour: false,
+        selectedExhibit: 'center',
+        followSpotlight: true,
+        animateNopon: true,
+      };
+      exhibitionFolder.add(tourParams, 'autoRotateArt').name('Animate Relics');
+      exhibitionFolder.add(tourParams, 'cinematicTour').name('Cinematic Tour');
+      exhibitionFolder.add(tourParams, 'followSpotlight').name('Showcase Spotlight');
+      exhibitionFolder.add(tourParams, 'animateNopon').name('Animate Nopon');
+      exhibitionFolder.add(tourParams, 'selectedExhibit', ['center', 'mazda', 'mclaren', 'bmw', 'duck', 'nopon']).name('Focus Exhibit');
+
+      const worldFolder = gui.addFolder('World / Background');
+      worldFolder.add(worldParams, 'showBackground').name('Show Skybox').onChange(applyWorldSettings);
+      worldFolder.add(worldParams, 'useEnvironmentLight').name('Use Env Light').onChange(applyWorldSettings);
+
+      const presetParams = { preset: 'Gallery White' };
+
+      function applyLightingPreset(name) {
+        if (name === 'Gallery White') {
+          worldParams.showBackground = true;
+          worldParams.useEnvironmentLight = true;
+          hemiLight.visible = true; hemiLight.intensity = 0.4;
+          pointLight.visible = true; pointLight.color.set(0xffffff); pointLight.intensity = 3; pointLight.position.set(0, 8, 0);
+          dirLight.visible = false;
+          ambientLight.visible = false;
+          spotLight.visible = false;
+          rectLight.visible = false;
+          followSpot.intensity = tourParams.followSpotlight ? 10 : 0;
+          followSpot.color.set(0xffffff);
+          wall.material.opacity = 0.14;
+          floor.material.color.set(0x2a2a2a);
+          floor.material.roughness = 0.45;
+          floor.material.metalness = 0.15;
+        }
+
+        if (name === 'Cyberpunk') {
+          worldParams.showBackground = false;
+          worldParams.useEnvironmentLight = false;
+          hemiLight.visible = false;
+          pointLight.visible = true; pointLight.color.set(0xff33aa); pointLight.intensity = 12; pointLight.position.set(0, 10, 0);
+          dirLight.visible = false;
+          ambientLight.visible = false;
+          spotLight.visible = true; spotLight.color.set(0x44ccff); spotLight.intensity = 20; spotLight.position.set(-6, 18, 8);
+          rectLight.visible = true; rectLight.color.set(0xff00cc); rectLight.intensity = 12; rectLight.position.set(0, 8, 12);
+          followSpot.intensity = tourParams.followSpotlight ? 16 : 0;
+          followSpot.color.set(0xffffff);
+          wall.material.opacity = 0.1;
+          floor.material.color.set(0x161625);
+          floor.material.roughness = 0.22;
+          floor.material.metalness = 0.4;
+        }
+
+        if (name === 'Emergency Red') {
+          worldParams.showBackground = false;
+          worldParams.useEnvironmentLight = false;
+          hemiLight.visible = false;
+          pointLight.visible = true; pointLight.color.set(0xff2222); pointLight.intensity = 8; pointLight.position.set(0, 10, 0);
+          dirLight.visible = true; dirLight.color.set(0xaa0000); dirLight.intensity = 2.2;
+          ambientLight.visible = false;
+          spotLight.visible = true; spotLight.color.set(0xff6666); spotLight.intensity = 16; spotLight.position.set(8, 16, 8);
+          rectLight.visible = false;
+          followSpot.intensity = tourParams.followSpotlight ? 10 : 0;
+          followSpot.color.set(0xffffff);
+          wall.material.opacity = 0.08;
+          floor.material.color.set(0x220c0c);
+          floor.material.roughness = 0.32;
+          floor.material.metalness = 0.18;
+        }
+
+        if (name === 'Neon Dream') {
+          worldParams.showBackground = false;
+          worldParams.useEnvironmentLight = false;
+          hemiLight.visible = true; hemiLight.intensity = 0.15; hemiLight.color.set(0x5588ff); hemiLight.groundColor.set(0x220044);
+          pointLight.visible = true; pointLight.color.set(0xff44dd); pointLight.intensity = 10; pointLight.position.set(0, 10, -2);
+          dirLight.visible = false;
+          ambientLight.visible = true; ambientLight.color.set(0x442266); ambientLight.intensity = 0.35;
+          spotLight.visible = true; spotLight.color.set(0x33eeff); spotLight.intensity = 18; spotLight.position.set(-10, 18, 6);
+          rectLight.visible = true; rectLight.color.set(0xff00aa); rectLight.intensity = 10; rectLight.position.set(4, 9, 10);
+          followSpot.intensity = tourParams.followSpotlight ? 18 : 0;
+          followSpot.color.set(0xffffff);
+          wall.material.opacity = 0.12;
+          floor.material.color.set(0x171320);
+          floor.material.roughness = 0.18;
+          floor.material.metalness = 0.48;
+        }
+
+        if (name === 'Blackout Spotlight') {
+          worldParams.showBackground = false;
+          worldParams.useEnvironmentLight = false;
+          hemiLight.visible = false;
+          pointLight.visible = false;
+          dirLight.visible = false;
+          ambientLight.visible = false;
+          rectLight.visible = false;
+          spotLight.visible = false;
+          followSpot.intensity = tourParams.followSpotlight ? 28 : 0;
+          followSpot.color.set(0xffffff);
+          wall.material.opacity = 0.06;
+          floor.material.color.set(0x111111);
+          floor.material.roughness = 0.28;
+          floor.material.metalness = 0.12;
+        }
+
+        if (name === 'Nopon Shrine') {
+          worldParams.showBackground = false;
+          worldParams.useEnvironmentLight = false;
+          hemiLight.visible = true; hemiLight.intensity = 0.18; hemiLight.color.set(0x88d8ff); hemiLight.groundColor.set(0x33210f);
+          pointLight.visible = true; pointLight.color.set(0xffd95b); pointLight.intensity = 8; pointLight.position.set(-10, 9, -10);
+          dirLight.visible = false;
+          ambientLight.visible = true; ambientLight.color.set(0x5c3b1e); ambientLight.intensity = 0.22;
+          spotLight.visible = true; spotLight.color.set(0x4fd7ff); spotLight.intensity = 15; spotLight.position.set(-15, 16, -8);
+          rectLight.visible = true; rectLight.color.set(0xffb347); rectLight.intensity = 8; rectLight.position.set(-10, 8, -15);
+          followSpot.intensity = tourParams.followSpotlight ? 16 : 0;
+          followSpot.color.set(0xfff0c0);
+          wall.material.opacity = 0.08;
+          floor.material.color.set(0x1b1712);
+          floor.material.roughness = 0.32;
+          floor.material.metalness = 0.18;
+        }
+
+        applyWorldSettings();
+        updateHelpers();
+      }
+
+      const presetFolder = gui.addFolder('Lighting Presets');
+      presetFolder.add(presetParams, 'preset', [
+        'Gallery White',
+        'Cyberpunk',
+        'Emergency Red',
+        'Neon Dream',
+        'Blackout Spotlight',
+        'Nopon Shrine'
+      ]).name('Preset').onChange(applyLightingPreset);
+
+      const hemiFolder = gui.addFolder('Hemisphere Light');
+      hemiFolder.add(hemiLight, 'visible').name('Enabled');
+      hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'color'), 'value').name('Sky Color');
+      hemiFolder.addColor(new ColorGUIHelper(hemiLight, 'groundColor'), 'value').name('Ground Color');
+      hemiFolder.add(hemiLight, 'intensity', 0, 2, 0.01);
+
+      const pointFolder = gui.addFolder('Point Light');
+      pointFolder.add(pointLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) pointLightHelper.visible = value;
+      });
+      pointFolder.addColor(new ColorGUIHelper(pointLight, 'color'), 'value');
+      pointFolder.add(pointLight, 'intensity', 0, 50, 0.1);
+      pointFolder.add(pointLight.position, 'x', -20, 20).onChange(updateHelpers);
+      pointFolder.add(pointLight.position, 'y', 1, 20).onChange(updateHelpers);
+      pointFolder.add(pointLight.position, 'z', -20, 20).onChange(updateHelpers);
+
+      const dirFolder = gui.addFolder('Directional Light');
+      dirFolder.add(dirLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) dirLightHelper.visible = value;
+      });
+      dirFolder.addColor(new ColorGUIHelper(dirLight, 'color'), 'value').name('Color');
+      dirFolder.add(dirLight, 'intensity', 0, 5, 0.01);
+      dirFolder.add(dirLight.position, 'x', -30, 30).name('Sun X').onChange(updateHelpers);
+      dirFolder.add(dirLight.position, 'y', 1, 30).name('Sun Y').onChange(updateHelpers);
+      dirFolder.add(dirLight.position, 'z', -30, 30).name('Sun Z').onChange(updateHelpers);
+      dirFolder.add(dirLight.shadow, 'bias', -0.01, 0.01, 0.0001).name('Shadow Bias');
+
+      const ambientFolder = gui.addFolder('Ambient Light');
+      ambientFolder.add(ambientLight, 'visible').name('Enabled');
+      ambientFolder.addColor(new ColorGUIHelper(ambientLight, 'color'), 'value').name('Color');
+      ambientFolder.add(ambientLight, 'intensity', 0, 3, 0.01);
+
+      const spotFolder = gui.addFolder('Spot Light');
+      spotFolder.add(spotLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) spotLightHelper.visible = value;
+      });
+      spotFolder.addColor(new ColorGUIHelper(spotLight, 'color'), 'value').name('Color');
+      spotFolder.add(spotLight, 'intensity', 0, 50, 0.1);
+      spotFolder.add(spotLight.position, 'x', -30, 30).onChange(updateHelpers);
+      spotFolder.add(spotLight.position, 'y', 1, 30).onChange(updateHelpers);
+      spotFolder.add(spotLight.position, 'z', -30, 30).onChange(updateHelpers);
+      spotFolder.add(spotLight, 'angle', 0.1, Math.PI / 2, 0.01).onChange(updateHelpers);
+      spotFolder.add(spotLight, 'penumbra', 0, 1, 0.01).onChange(updateHelpers);
+      spotFolder.add(spotLight.target.position, 'x', -20, 20).name('Target X').onChange(updateHelpers);
+      spotFolder.add(spotLight.target.position, 'y', -5, 10).name('Target Y').onChange(updateHelpers);
+      spotFolder.add(spotLight.target.position, 'z', -20, 20).name('Target Z').onChange(updateHelpers);
+
+      const rectFolder = gui.addFolder('RectArea Light');
+      rectFolder.add(rectLight, 'visible').name('Enabled').onChange((value) => {
+        if (helpersParam.visible) rectLightHelper.visible = value;
+      });
+      rectFolder.addColor(new ColorGUIHelper(rectLight, 'color'), 'value').name('Color');
+      rectFolder.add(rectLight, 'intensity', 0, 20, 0.1);
+      rectFolder.add(rectLight.position, 'x', -30, 30).onChange(updateHelpers);
+      rectFolder.add(rectLight.position, 'y', 1, 30).onChange(updateHelpers);
+      rectFolder.add(rectLight.position, 'z', -30, 30).onChange(updateHelpers);
+      rectFolder.add(rectLight, 'width', 1, 20, 0.1);
+      rectFolder.add(rectLight, 'height', 1, 20, 0.1);
+
+      const followFolder = gui.addFolder('Showcase Spotlight');
+      followFolder.add(followSpot, 'intensity', 0, 40, 0.1).name('Intensity').onChange(updateHelpers);
+      followFolder.addColor(new ColorGUIHelper(followSpot, 'color'), 'value').name('Color');
+      followFolder.add(followSpot, 'angle', 0.1, Math.PI / 2, 0.01).name('Angle').onChange(updateHelpers);
+      followFolder.add(followSpot, 'penumbra', 0, 1, 0.01).name('Penumbra').onChange(updateHelpers);
+
+      const wallFolder = gui.addFolder('Outer Cylinder Material');
+      wallFolder.add(wall, 'visible').name('Enabled');
+      wallFolder.addColor(new ColorGUIHelper(wall.material, 'color'), 'value').name('Color');
+      wallFolder.add(wall.material, 'opacity', 0.02, 0.6, 0.01).name('Opacity');
+      wallFolder.add(wall.material, 'roughness', 0, 1, 0.01).name('Roughness');
+      wallFolder.add(wall.material, 'metalness', 0, 1, 0.01).name('Metalness');
+
+      const rimFolder = gui.addFolder('Outer Cylinder Rings');
+      const rimParams = { visible: true };
+      rimFolder.add(rimParams, 'visible').name('Show Rings').onChange((value) => {
+        topRim.visible = value;
+        bottomRim.visible = value;
+      });
+      rimFolder.addColor(new ColorGUIHelper(sharedRimMat, 'color'), 'value').name('Ring Color');
+      rimFolder.add(sharedRimMat, 'roughness', 0, 1, 0.01).name('Ring Roughness');
+      rimFolder.add(sharedRimMat, 'metalness', 0, 1, 0.01).name('Ring Metalness');
+
+      applyLightingPreset(presetParams.preset);
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+      window.addEventListener('resize', onWindowResize);
+
+      const clock = new THREE.Clock();
+
+      function updateOrbitingObjects(time) {
+        orbitingObjects.forEach((entry, i) => {
+          const cx = entry.centerX ?? 0;
+          const cz = entry.centerZ ?? 0;
+          const angle = time * entry.speed + entry.angleOffset;
+          entry.mesh.position.x = cx + Math.cos(angle) * entry.radius;
+          entry.mesh.position.z = cz + Math.sin(angle) * entry.radius;
+          entry.mesh.position.y = entry.baseY + Math.sin(time * 2 + i) * entry.bobAmp;
+        });
+      }
+
+      function updateSpins(time) {
+        floatingAnimationData.forEach((entry) => {
+          entry.mesh.rotation.x = time * entry.spinX + entry.phase;
+          entry.mesh.rotation.y = time * entry.spinY + entry.phase;
+        });
+      }
+
+      function updatePedestalGlow(time) {
+        [...Object.values(pedestals), noponHero.pedestal].forEach((pedestal, i) => {
+          const pulse = 1.0 + 0.25 * Math.sin(time * 2.2 + i);
+          pedestal.base.material.emissiveIntensity = 0.9 * pulse;
+          pedestal.ring.material.emissiveIntensity = 1.3 * pulse;
+          pedestal.glow.material.opacity = 0.14 + 0.08 * Math.sin(time * 2.2 + i);
+        });
+      }
+
+      function updateBanners(time) {
+        banners.forEach((entry, i) => {
+          entry.cloth.rotation.y = Math.sin(time * 1.4 + i) * 0.08;
+          entry.cloth.position.z = Math.sin(time * 1.4 + i) * 0.12;
+          entry.sigil.rotation.z = time * 0.3 + i;
+        });
+      }
+
+      function updateRelicStands(time) {
+        relicStands.forEach((entry, i) => {
+          entry.relic.rotation.y = time * (0.5 + i * 0.06);
+          entry.relic.position.y = 3.0 + Math.sin(time * 1.8 + i) * 0.12;
+        });
+      }
+
+      function updateNopon(time) {
+        if (!tourParams.animateNopon) return;
+        const { group, parts, basePosY } = noponHero;
+        group.position.y = basePosY + Math.sin(time * 1.8) * 0.12;
+        group.rotation.y = -0.35 + Math.sin(time * 0.45) * 0.18;
+        parts.earL.rotation.y = Math.sin(time * 2.6) * 0.22;
+        parts.earR.rotation.y = -Math.sin(time * 2.6) * 0.22;
+        parts.headTuft.rotation.z = 0.15 + Math.sin(time * 2.0) * 0.08;
+        parts.headTuft2.rotation.z = -0.25 - Math.sin(time * 2.0) * 0.06;
+        parts.spearTip.material.emissiveIntensity = 0.8 + Math.sin(time * 3.2) * 0.35;
+        parts.scarf.material.emissiveIntensity = 0.2 + Math.sin(time * 2.2) * 0.08;
+      }
+
+      function updateShowcaseSpotlight(time) {
+        if (!tourParams.followSpotlight) {
+          followSpot.intensity = 0;
+          return;
+        }
+
+        const target = exhibitTargets[tourParams.selectedExhibit] || centerTarget;
+        followSpot.position.set(
+          target.x + Math.cos(time * 0.7) * 4,
+          14 + Math.sin(time * 0.9) * 1.5,
+          target.z + Math.sin(time * 0.7) * 4
+        );
+        followSpot.target.position.copy(target);
+
+        if (helpersParam.visible) {
+          followSpotHelper.visible = true;
+        }
+      }
+
+      function updateCinematicTour(time) {
+        if (tourParams.cinematicTour) {
+          controls.enabled = false;
+          const focus = exhibitTargets[tourParams.selectedExhibit] || centerTarget;
+          const radius = tourParams.selectedExhibit === 'center' ? 35 : (tourParams.selectedExhibit === 'nopon' ? 10 : 14);
+          camera.position.x = focus.x + Math.sin(time * 0.18) * radius;
+          camera.position.z = focus.z + Math.cos(time * 0.18) * radius;
+          camera.position.y = 10 + Math.sin(time * 0.33) * 3;
+          camera.lookAt(focus.x, focus.y + 1.5, focus.z);
+        } else {
+          controls.enabled = true;
+          controls.target.copy(exhibitTargets[tourParams.selectedExhibit] || centerTarget);
+          controls.update();
+        }
+      }
+
+      function animate() {
+        const time = clock.getElapsedTime();
+
+        if (tourParams.autoRotateArt) {
+          updateOrbitingObjects(time);
+          updateSpins(time);
+        }
+
+        updatePedestalGlow(time);
+        updateBanners(time);
+        updateRelicStands(time);
+        updateNopon(time);
+        updateShowcaseSpotlight(time);
+        updateCinematicTour(time);
+
+        spotLightHelper.update();
+        followSpotHelper.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
+'''
+path='/mnt/data/nopon_hall_of_machines.html'
+with open(path,'w',encoding='utf-8') as f:
+    f.write(html)
+print(path, len(html))

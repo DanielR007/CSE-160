@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Surreal Interactive Exhibition</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #c { width: 100vw; height: 100vh; display: block; }
+      #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 1px 1px 2px black; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 8, 30);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 2, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+
+    // ==========================================
+    // CUBEMAP
+    // ==========================================
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const environmentMap = cubeTextureLoader.load([
+      './pos-x.jpg', './neg-x.jpg', './pos-y.jpg', 
+      './neg-y.jpg', './pos-z.jpg', './neg-z.jpg'  
+    ]);
+    environmentMap.colorSpace = THREE.SRGBColorSpace;
+    scene.background = environmentMap;
+    scene.environment = environmentMap;
+
+    // ==========================================
+    // LIGHTING
+    // ==========================================
+    scene.add(new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.5));
+    
+    const pointLight = new THREE.PointLight(0xFFFFFF, 3, 50); 
+    pointLight.position.set(0, 10, 0); 
+    scene.add(pointLight);
+
+    const dirLight = new THREE.DirectionalLight(0xFFFFFF, 2.5);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true; 
+    dirLight.shadow.bias = -0.0001;
+    // Massive shadow map area to cover the giant white bowl
+    dirLight.shadow.camera.left = -30;
+    dirLight.shadow.camera.right = 30;
+    dirLight.shadow.camera.top = 30;
+    dirLight.shadow.camera.bottom = -30;
+    dirLight.shadow.mapSize.width = 2048; 
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const floatingObjects = []; 
+    
+    // --- Pedestals ---
+    const pedGeo = new THREE.CylinderGeometry(2, 2, 0.5, 32);
+    const pedMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 });
+    const positions = [[0, 3], [-7, 0], [7, 0], [0, -5]]; 
+    positions.forEach(pos => {
+        const pedestal = new THREE.Mesh(pedGeo, pedMat);
+        pedestal.position.set(pos[0], -0.25, pos[1]);
+        pedestal.receiveShadow = true;
+        pedestal.castShadow = true;
+        scene.add(pedestal);
+    });
+
+    // --- Original Textured Cubes ---
+    const texLoader = new THREE.TextureLoader();
+    const brickTex = texLoader.load('https://threejs.org/manual/examples/resources/images/wall.jpg');
+    brickTex.colorSpace = THREE.SRGBColorSpace;
+    const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const boxMat = new THREE.MeshStandardMaterial({ map: brickTex });
+    
+    for(let i=0; i<3; i++) {
+        const cube = new THREE.Mesh(boxGeo, boxMat);
+        cube.position.set((i - 1) * 5, 6, -4);
+        cube.castShadow = true;
+        scene.add(cube);
+        floatingObjects.push(cube);
+    }
+
+    // --- Floating Abstract Art ---
+    const geometries = [
+        new THREE.TorusGeometry(0.8, 0.3, 16, 100),
+        new THREE.SphereGeometry(1, 32, 16),
+        new THREE.IcosahedronGeometry(1, 0)
+    ];
+    const artMat = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff, roughness: 0.1, metalness: 1.0, envMap: environmentMap 
+    });
+
+    for(let i=0; i < 20; i++) {
+        const randomGeo = geometries[Math.floor(Math.random() * geometries.length)];
+        const mesh = new THREE.Mesh(randomGeo, artMat.clone()); 
+        mesh.position.set((Math.random() - 0.5) * 25, Math.random() * 10 + 5, (Math.random() - 0.5) * 20);
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        mesh.castShadow = true;
+        scene.add(mesh);
+        floatingObjects.push(mesh);
+    }
+
+    // ==========================================
+    // LOAD CUSTOM CAR MODELS
+    // ==========================================
+    const gltfLoader = new GLTFLoader();
+
+    function setupModel(model, x, z, scale = 1) {
+        model.position.set(x, 0, z);
+        model.scale.set(scale, scale, scale);
+        model.traverse((node) => {
+            if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; }
+        });
+        scene.add(model);
+    }
+
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => setupModel(gltf.scene, 0, 3, 1));
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => setupModel(gltf.scene, -7, 0, 1));
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => setupModel(gltf.scene, 7, 0, 1));
+    
+    // IF YOU HAVE A BMW MODEL, ADD IT HERE:
+    // gltfLoader.load('./bmw.glb', (gltf) => setupModel(gltf.scene, 0, -5, 1));
+
+
+    // ==========================================
+    // THE PERFECT, MASSIVE WHITE BOWL
+    // ==========================================
+    const objLoader = new OBJLoader();
+    
+    objLoader.load('./base_tri.obj', (obj) => {
+        
+        // 1. Give it a blinding white material
+        obj.traverse((node) => {
+            if (node.isMesh) {
+                node.material = new THREE.MeshStandardMaterial({
+                    color: 0xffffff, // Pure white
+                    emissive: 0x222222, // Gives it a slight inner glow
+                    roughness: 0.8, // Matte finish
+                    side: THREE.DoubleSide 
+                });
+                node.receiveShadow = true;
+            }
+        });
+
+        // 2. Mathematically measure the bowl to find its TRUE center
+        const box = new THREE.Box3().setFromObject(obj);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        // 3. Shift the internal geometry so its physical center is exactly at 0,0,0
+        obj.position.sub(center); 
+
+        // 4. Wrap it in a Group to scale it safely
+        const stageGroup = new THREE.Group();
+        stageGroup.add(obj);
+
+        // 5. Make it 100x bigger uniformly (keeps it from pancaking)
+        stageGroup.scale.set(100, 100, 100); 
+        
+        // 6. Drop it perfectly beneath the exhibition
+        stageGroup.position.set(0, -3, 0); 
+        
+        scene.add(stageGroup);
+    });
+
+    // ==========================================
+    // RAYCASTER (Click to Glow)
+    // ==========================================
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    window.addEventListener('click', (event) => {
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(floatingObjects);
+        if (intersects.length > 0) {
+            const hitObject = intersects[0].object;
+            hitObject.material.emissive.setHex(Math.random() * 0xffffff);
+            hitObject.material.emissiveIntensity = 2; 
+        }
+    });
+
+    // ==========================================
+    // GUI CONTROLS & CINEMATIC TOUR
+    // ==========================================
+    const gui = new GUI();
+    const guiParams = { 
+        autoRotateArt: true,
+        cinematicTour: false 
+    };
+    gui.add(guiParams, 'autoRotateArt').name('Animate Art');
+    gui.add(guiParams, 'cinematicTour').name('🎥 Cinematic Tour');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const time = clock.getElapsedTime();
+
+      if (guiParams.autoRotateArt) {
+          floatingObjects.forEach((obj, ndx) => {
+              const speed = 0.2 + ndx * 0.05;
+              obj.rotation.x = time * speed;
+              obj.rotation.y = time * speed;
+              obj.position.y += Math.sin(time * 2 + ndx) * 0.005; 
+          });
+      }
+
+      // --- THE CINEMATIC FLY-THROUGH CAMERA ---
+      if (guiParams.cinematicTour) {
+          controls.enabled = false; 
+          
+          // Glides in a massive 40-unit wide circle around the giant bowl
+          const radius = 40;
+          camera.position.x = Math.sin(time * 0.2) * radius;
+          camera.position.z = Math.cos(time * 0.2) * radius;
+          camera.position.y = 15 + Math.sin(time * 0.4) * 5; 
+          
+          camera.lookAt(0, 2, 0); 
+      } else {
+          controls.enabled = true;
+          controls.update(); 
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <div id="ui">
+        <h2>Surreal Car Exhibition</h2>
+        <p>Left Click + Drag: Orbit Camera</p>
+        <p>Scroll: Zoom</p>
+        <p><b>WOW FEATURE:</b> Click on any floating shape to make it glow!</p>
+    </div>
+    <canvas id="c"></canvas>
+  </body>
+</html>

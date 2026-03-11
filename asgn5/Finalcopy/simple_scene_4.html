@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three.js - Centered Models</title>
+    <style>
+      body { margin: 0; }
+      #c { width: 100vw; height: 100vh; display: block; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const fov = 45;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 200; 
+    
+    // 1. Pulled the camera further back (Z: 14) and higher up (Y: 6)
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, 6, 14);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 0, 0); 
+    controls.update();
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#333333'); 
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); 
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5); 
+    directionalLight.position.set(5, 10, 5);
+    scene.add(directionalLight);
+
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    // 2. Arranged the models into a tighter "diamond" shape
+    
+    // Duck (Front Center)
+    gltfLoader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb', (gltf) => {
+        const duck = gltf.scene;
+        duck.position.set(0, 0, 3); // Moved forward
+        scene.add(duck);
+    });
+
+    // Mazda (Left)
+    gltfLoader.load('./Mazda RX-7.glb', (gltf) => {
+        const mazda = gltf.scene;
+        mazda.position.set(-4, 0, 0); // Tucked in slightly closer
+        scene.add(mazda);
+    });
+
+    // McLaren (Right)
+    gltfLoader.load('./uploads_files_2815692_Mclaren+Senna.glb', (gltf) => {
+        const mclaren = gltf.scene;
+        mclaren.position.set(4, 0, 0); // Tucked in slightly closer
+        scene.add(mclaren);
+    });
+
+    // Base Tri (Back Center)
+    objLoader.load('./base_tri.obj', (obj) => {
+        obj.position.set(0, 0, -3); // Moved slightly closer to center
+        scene.add(obj);
+    });
+
+    // --- GUI SLIDERS ---
+    const gui = new GUI();
+
+    function updateCamera() {
+      camera.updateProjectionMatrix();
+    }
+
+    gui.add(camera, 'fov', 1, 180).name('Field of View').onChange(updateCamera);
+    gui.add(camera, 'near', 0.01, 10, 0.01).name('Near Clipping').onChange(updateCamera);
+    gui.add(camera, 'far', 10, 200, 1).name('Far Clipping').onChange(updateCamera);
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+
+    function animate() {
+      controls.update(); 
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>

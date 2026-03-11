@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSE 160 Asgn 5 - Nopon Hunter Remastered</title>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #111;
+        color: #eee;
+      }
+
+      #c {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      #crosshair {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 20px;
+        height: 20px;
+        margin-left: -10px;
+        margin-top: -10px;
+        pointer-events: none;
+        text-align: center;
+        line-height: 20px;
+        font-size: 22px;
+        color: rgba(255,255,255,0.85);
+        text-shadow: 1px 1px 2px black;
+        z-index: 20;
+      }
+
+      #panel {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        width: 300px;
+        background: rgba(24, 24, 24, 0.88);
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: 14px;
+        z-index: 30;
+        box-shadow: 0 0 18px rgba(0,0,0,0.35);
+      }
+
+      #panel h2 {
+        margin: 0 0 10px 0;
+        text-align: center;
+        color: #bfc8d0;
+        font-size: 1.15rem;
+      }
+
+      .statBox {
+        font-size: 1.05rem;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 10px;
+      }
+
+      #modeDisplay {
+        background: #404040;
+        border: 2px solid #666;
+        color: white;
+      }
+
+      #scoreBox {
+        background: rgba(255, 235, 59, 0.08);
+        border: 2px solid #ffeb3b;
+        color: #ffeb3b;
+      }
+
+      .controls {
+        font-size: 13px;
+        line-height: 1.5;
+        color: #ccc;
+        background: #1a1a1a;
+        border-radius: 6px;
+        padding: 10px;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 8px;
+        padding: 10px;
+        cursor: pointer;
+        border: 1px solid #666;
+        border-radius: 6px;
+        background: #444;
+        color: white;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background: #555;
+      }
+
+      #message {
+        margin-top: 10px;
+        min-height: 20px;
+        color: #7CFF7C;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      #fps {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #777;
+        text-align: right;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="c"></canvas>
+    <div id="crosshair">+</div>
+
+    <div id="panel">
+      <h2>NOPON HUNTER REMASTERED</h2>
+
+      <div id="modeDisplay" class="statBox">FIRST PERSON MODE</div>
+      <div id="scoreBox" class="statBox">Caught: 0</div>
+
+      <div class="controls">
+        <b>MOVEMENT:</b><br />
+        • <b>W, A, S, D</b>: Move<br />
+        • <b>Mouse</b>: Look around<br />
+        • <b>Space / Shift</b>: Up / Down debug fly<br />
+        • <b>R</b>: Reset player<br />
+        • <b>F</b>: Toggle fog<br />
+        • <b>E</b>: Catch Nopon (when close)<br />
+        <hr style="border-color:#444" />
+        <b>START:</b><br />
+        Click inside the scene, then press the lock button below.
+      </div>
+
+      <button id="lockBtn">CLICK TO LOCK POINTER</button>
+      <button id="fogBtn">Fog: ON</button>
+
+      <div id="message"></div>
+      <div id="fps">FPS: 60</div>
+    </div>
+
+    <script type="module" src="./asg5.js"></script>
+  </body>
+</html>

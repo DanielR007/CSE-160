@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Change a point color</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.183.2/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.querySelector('#c');
+    const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const fov = 75;
+    const aspect = window.innerWidth / window.innerHeight;
+    const near = 0.1;
+    const far = 5;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 2;
+
+    const scene = new THREE.Scene();
+
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize, false);
+    
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load( 'lion_wall.jpg' );
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+    });
+    const color = 0xFFFFFF;
+    
+    const intensity = 3;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+
+    function makeInstance(geometry, color, x) {
+      const material = new THREE.MeshPhongMaterial({color});
+      const box = new THREE.Mesh(geometry, material);
+      scene.add(box);
+      box.position.x = x;
+      return box;
+    }
+
+    const cubes = [
+      makeInstance(geometry, 0x44aa88,  0),
+      makeInstance(geometry, 0x8844aa, -2),
+      makeInstance(geometry, 0xaa8844,  2),
+    ];
+
+    function animate(time) {
+      time *= 0.001; // seconds
+      cubes.forEach((cube, ndx) => {
+        const speed = 1 + ndx * 0.1;
+        const rot = time * speed;
+        cube.rotation.x = rot;
+        cube.rotation.y = rot;
+      });
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+    </script>
+
+  </head>
+
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+</html>
