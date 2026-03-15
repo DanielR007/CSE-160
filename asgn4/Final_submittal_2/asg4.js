@@ -156,7 +156,20 @@ var FSHADER_SOURCE = `
 
     // Apply the spotFactor to your diffuse and specular light!
     // vec3 diffuse = vec3(1.0,1.0,1.0) * baseColor.rgb * nDotL * 0.7 * spotFactor; 
-    vec3 lightCol = mix(vec3(1.0), vec3(1.0, 0.2, 0.2), u_lightColor);
+    //vec3 lightCol = mix(vec3(1.0), vec3(1.0, 0.2, 0.2), u_lightColor);
+    float t = u_lightColor;   // expect 0.0 to 1.0
+    vec3 lightCol;
+
+    if (t < 0.25) {
+        lightCol = mix(vec3(1.0), vec3(1.0, 0.0, 0.0), t / 0.25);           // white -> red
+    } else if (t < 0.50) {
+        lightCol = mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), (t-0.25)/0.25); // red -> green
+    } else if (t < 0.75) {
+        lightCol = mix(vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0), (t-0.50)/0.25); // green -> blue
+    } else {
+        lightCol = mix(vec3(0.0, 0.0, 1.0), vec3(1.0), (t-0.75)/0.25);       // blue -> white
+    }
+
     vec3 diffuse = lightCol * baseColor.rgb * nDotL * 0.7 * spotFactor;
     vec3 ambient = baseColor.rgb * 0.2; // Ambient is unaffected by the spotlight
     float finalSpecular = specular * spotFactor;
